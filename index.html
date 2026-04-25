@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Truy tìm kho báu ca dao Việt Nam</title>
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -18,6 +18,7 @@
             background: #020617;
             margin: 0;
             overflow: hidden;
+            touch-action: manipulation;
         }
         .rotate-y-180 { transform: rotateY(180deg); }
         .rotate-y-0 { transform: rotateY(0deg); }
@@ -41,6 +42,17 @@
             background: transparent url('https://s3-us-west-2.amazonaws.com/s.cdpn.io/123163/twinkling.png') repeat top center;
             z-index: 1; animation: stars 200s linear infinite; opacity: 0.3;
         }
+
+        /* Tối ưu Input để không bị zoom trên iOS và hiển thị đẹp hơn */
+        .puzzle-input {
+            font-size: 18px !important;
+            caret-color: #fbbf24;
+        }
+        @media (min-width: 768px) {
+            .puzzle-input {
+                font-size: 24px !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -49,10 +61,8 @@
     <script type="text/babel">
         const { useState, useEffect, useRef, useCallback } = React;
 
-        // Level threshold configuration
         const LEVEL_THRESHOLDS = [0, 12000, 25000, 45000, 75000, 110000, 155000, 210000, 275000, 350000];
 
-        // Wheel configuration
         const WHEEL_SEGMENTS = [
             { label: "100", color: "#1e1b4b", value: 100 },
             { label: "300", color: "#312e81", value: 300 },
@@ -87,7 +97,7 @@
             const [spinsLeft, setSpinsLeft] = useState(3);
             const [revealedLetters, setRevealedLetters] = useState(new Set());
             const [userGuessMap, setUserGuessMap] = useState({});
-            const [statusMsg, setStatusMsg] = useState("Quay nón để mở gợi ý câu hỏi!");
+            const [statusMsg, setStatusMsg] = useState("Quay nón hoặc nhấn vào ô mật mã để nhập!");
             const [currentWheelValue, setCurrentWheelValue] = useState(0);
             const [canGuess, setCanGuess] = useState(false);
             const [rotation, setRotation] = useState(0);
@@ -101,7 +111,6 @@
 
             const wheelCanvasRef = useRef(null);
 
-            // Strip Vietnamese tone marks but keep base characters like Ă, Â...
             const stripToneOnly = (str) => {
                 if (!str) return "";
                 return str.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").normalize("NFC");
@@ -201,7 +210,7 @@
                     setStatusMsg("+1 LƯỢT QUAY!");
                 } else {
                     setCurrentWheelValue(result.value);
-                    setStatusMsg(`${result.label} ĐIỂM! Đoán ký tự câu hỏi.`);
+                    setStatusMsg(`${result.label} ĐIỂM! Hãy đoán ký tự.`);
                     setCanGuess(true);
                 }
             };
@@ -232,17 +241,38 @@
                 setWheelResultLabel("");
             };
 
-            const handleInputChange = (wordIdx, charIdx, val) => {
-                const key = `${wordIdx}-${charIdx}`;
+            const handleInputChange = (wordIdx, cIdx, val) => {
+                const key = `${wordIdx}-${cIdx}`;
                 const upperVal = stripToneOnly(val.slice(-1)); 
+                
                 setUserGuessMap(prev => ({
                     ...prev,
                     [key]: upperVal
                 }));
 
-                if (upperVal && charIdx < GAME_DATA[currentLevel].a.split(' ')[wordIdx].length - 1) {
-                    const nextInput = document.getElementById(`input-${wordIdx}-${charIdx + 1}`);
+                // Auto-focus next input
+                if (upperVal && cIdx < GAME_DATA[currentLevel].a.split(' ')[wordIdx].length - 1) {
+                    const nextInput = document.getElementById(`input-${wordIdx}-${cIdx + 1}`);
                     if (nextInput) nextInput.focus();
+                } else if (upperVal && wordIdx < GAME_DATA[currentLevel].a.split(' ').length - 1) {
+                    // Try to focus the first char of the next word if this was the last char of current word
+                    const nextWordFirstInput = document.getElementById(`input-${wordIdx + 1}-0`);
+                    if (nextWordFirstInput) nextWordFirstInput.focus();
+                }
+            };
+
+            const handleKeyDown = (wordIdx, cIdx, e) => {
+                const key = `${wordIdx}-${cIdx}`;
+                if (e.key === 'Backspace' && !userGuessMap[key]) {
+                    if (cIdx > 0) {
+                        const prevInput = document.getElementById(`input-${wordIdx}-${cIdx - 1}`);
+                        if (prevInput) prevInput.focus();
+                    } else if (wordIdx > 0) {
+                        const prevWord = GAME_DATA[currentLevel].a.split(' ')[wordIdx - 1];
+                        const lastCharIdxOfPrevWord = prevWord.length - 1;
+                        const prevInput = document.getElementById(`input-${wordIdx - 1}-${lastCharIdxOfPrevWord}`);
+                        if (prevInput) prevInput.focus();
+                    }
                 }
             };
 
@@ -265,11 +295,11 @@
 
                 if (isAllCorrect) {
                     setScore(prev => prev + 10000);
-                    setStatusMsg("CHÍNH XÁC! Giải mã thành công.");
+                    setStatusMsg("CHÍNH XÁC! Kho báu đã mở.");
                     setTimeout(() => setShowSuccessModal(true), 800);
                 } else {
                     setScore(prev => Math.max(0, prev - 1000));
-                    setStatusMsg("Mật mã chưa chính xác.");
+                    setStatusMsg("Mật mã chưa khớp. Hãy thử lại!");
                     const container = document.getElementById('answer-area');
                     if (container) {
                         container.classList.add('shake');
@@ -286,54 +316,53 @@
             };
 
             return (
-                <div className="relative w-full h-screen flex flex-col z-10">
-                    {/* Background Overlay */}
+                <div className="relative w-full h-screen flex flex-col z-10 overflow-hidden">
                     <div className="stars"></div>
                     <div className="twinkling"></div>
 
                     {/* Header */}
-                    <div className="relative z-20 flex justify-between items-center px-6 py-4 bg-black/60 border-b border-white/10 backdrop-blur-md">
-                        <div>
-                            <p className="text-[10px] text-indigo-400 font-bold uppercase">Tiền quỹ</p>
-                            <p className="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-600 drop-shadow-glow">
+                    <div className="relative z-20 flex justify-between items-center px-4 md:px-6 py-4 bg-black/60 border-b border-white/10 backdrop-blur-md">
+                        <div className="flex flex-col">
+                            <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-tight">Tiền quỹ</p>
+                            <p className="text-2xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-600 drop-shadow-glow">
                                 {score.toLocaleString()}đ
                             </p>
-                            <div className="mt-1 text-[9px] bg-blue-900/40 px-2 py-0.5 rounded border border-blue-500/30">
-                                Mục tiêu màn {currentLevel + 2}: <span className="text-blue-300 font-bold">{(LEVEL_THRESHOLDS[currentLevel+1] || 0).toLocaleString()}đ</span>
+                            <div className="mt-1 text-[8px] md:text-[9px] bg-blue-900/40 px-2 py-0.5 rounded border border-blue-500/30 w-fit">
+                                Mục tiêu LV{currentLevel + 2}: <span className="text-blue-300 font-bold">{(LEVEL_THRESHOLDS[currentLevel+1] || 0).toLocaleString()}đ</span>
                             </div>
                         </div>
 
                         <div className="flex flex-col items-center">
-                            <p className="text-[9px] text-slate-400 font-bold uppercase mb-1">Quota</p>
-                            <div className="flex items-center gap-3">
-                                <span className={`text-4xl font-black ${spinsLeft <= 1 ? 'text-red-500 animate-pulse' : 'text-white'}`}>{spinsLeft}</span>
+                            <p className="text-[9px] text-slate-400 font-bold uppercase mb-1">⚡ Năng lượng</p>
+                            <div className="flex items-center gap-2">
+                                <span className={`text-3xl md:text-4xl font-black ${spinsLeft <= 1 ? 'text-red-500 animate-pulse' : 'text-white'}`}>{spinsLeft}</span>
                                 <button 
                                     onClick={() => { if(score >= 800) { setScore(s => s - 800); setSpinsLeft(l => l + 1); } }}
-                                    className="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg border-b-4 border-emerald-900 active:scale-95"
+                                    className="bg-emerald-600 hover:bg-emerald-500 text-white text-[8px] md:text-[10px] font-bold px-2 py-1.5 rounded-lg border-b-4 border-emerald-900 active:scale-95"
                                 >
-                                    ĐỔI 800đ ➔ 1⚡
+                                    +1 QUOTA
                                 </button>
                             </div>
                         </div>
 
-                        <div className="text-right hidden sm:block">
-                            <p className="text-[10px] text-blue-400 font-bold uppercase truncate max-w-[200px]">{statusMsg}</p>
-                            <p className="text-2xl font-black text-green-500 italic uppercase font-serif">Chương {currentLevel + 1}</p>
+                        <div className="text-right flex flex-col items-end">
+                            <p className="text-[9px] text-blue-400 font-bold uppercase truncate max-w-[120px] md:max-w-[200px]">{statusMsg}</p>
+                            <p className="text-xl md:text-2xl font-black text-green-500 italic uppercase">CHƯƠNG {currentLevel + 1}</p>
                         </div>
                     </div>
 
                     {/* Content */}
-                    <div className="relative z-20 flex-1 flex flex-col justify-center items-center p-4 gap-6">
+                    <div className="relative z-20 flex-1 flex flex-col justify-center items-center p-4 gap-4 md:gap-8 overflow-y-auto">
                         <div className="w-full text-center">
-                            <h3 className="text-[11px] text-indigo-400/60 font-black tracking-[0.5em] uppercase mb-4">DI SẢN CỔ THƯ</h3>
-                            <div className="flex flex-wrap justify-center gap-2">
+                            <h3 className="text-[10px] md:text-[11px] text-indigo-400/60 font-black tracking-[0.4em] uppercase mb-2">DI SẢN CỔ THƯ</h3>
+                            <div className="flex flex-wrap justify-center gap-1.5 md:gap-2">
                                 {GAME_DATA[currentLevel].q.split(' ').map((word, wIdx) => (
-                                    <div key={wIdx} className="flex gap-1 mb-2">
+                                    <div key={wIdx} className="flex gap-1 mb-1">
                                         {word.split('').map((char, cIdx) => {
                                             const baseChar = stripToneOnly(char);
                                             const isReveal = revealedLetters.has(baseChar) || !VIET_ALPHABET.includes(baseChar);
                                             return (
-                                                <div key={cIdx} className={`w-8 h-10 md:w-10 md:h-12 flex items-center justify-center font-bold text-lg md:text-xl rounded-lg border-2 transition-all duration-500 ${isReveal ? 'bg-white text-indigo-900 border-indigo-200 rotate-y-0 shadow-light' : 'bg-slate-800/60 border-slate-700 text-transparent rotate-y-180'}`}>
+                                                <div key={cIdx} className={`w-7 h-9 md:w-10 md:h-12 flex items-center justify-center font-bold text-base md:text-xl rounded-md border transition-all duration-500 ${isReveal ? 'bg-white text-indigo-900 border-indigo-200 rotate-y-0 shadow-light' : 'bg-slate-800/60 border-slate-700 text-transparent rotate-y-180'}`}>
                                                     {isReveal ? baseChar : ''}
                                                 </div>
                                             );
@@ -343,11 +372,11 @@
                             </div>
                         </div>
 
-                        <div className="w-full text-center" id="answer-area">
-                            <h3 className="text-[11px] text-yellow-500/60 font-black tracking-[0.5em] uppercase mb-4 text-pulse">MẬT MÃ TRUY TÌM (TỰ ĐIỀN)</h3>
-                            <div className="flex flex-wrap justify-center gap-4">
+                        <div className="w-full text-center py-4" id="answer-area">
+                            <h3 className="text-[10px] md:text-[11px] text-yellow-500/60 font-black tracking-[0.4em] uppercase mb-4 text-pulse">MẬT MÃ TRUY TÌM (TỰ ĐIỀN)</h3>
+                            <div className="flex flex-wrap justify-center gap-3 md:gap-4 mb-6">
                                 {GAME_DATA[currentLevel].a.split(' ').map((word, wIdx) => (
-                                    <div key={wIdx} className="flex gap-2">
+                                    <div key={wIdx} className="flex gap-1.5 md:gap-2">
                                         {word.split('').map((char, cIdx) => {
                                             const val = userGuessMap[`${wIdx}-${cIdx}`] || "";
                                             return (
@@ -357,8 +386,16 @@
                                                     type="text"
                                                     maxLength="1"
                                                     value={val}
+                                                    inputMode="text"
+                                                    autoComplete="off"
+                                                    autoCorrect="off"
+                                                    autoCapitalize="characters"
+                                                    spellCheck="false"
+                                                    enterKeyHint="next"
+                                                    onFocus={(e) => e.target.select()}
+                                                    onKeyDown={(e) => handleKeyDown(wIdx, cIdx, e)}
                                                     onChange={(e) => handleInputChange(wIdx, cIdx, e.target.value)}
-                                                    className={`w-10 h-14 md:w-14 md:h-20 bg-black/40 border-b-4 border-slate-700 flex items-center justify-center font-black text-2xl md:text-4xl text-center uppercase focus:outline-none focus:border-yellow-500 transition-all ${val ? 'text-white border-indigo-500 shadow-neon' : 'text-transparent'}`}
+                                                    className={`puzzle-input w-9 h-12 md:w-14 md:h-20 bg-black/40 border-b-4 border-slate-700 flex items-center justify-center font-black text-center uppercase focus:outline-none focus:border-yellow-500 transition-all ${val ? 'text-white border-indigo-500 shadow-neon' : 'text-slate-500'}`}
                                                 />
                                             );
                                         })}
@@ -367,7 +404,7 @@
                             </div>
                             <button 
                                 onClick={checkFinalAnswer}
-                                className="mt-8 bg-gradient-to-r from-yellow-500 to-amber-600 text-black px-10 py-3 rounded-full font-black uppercase shadow-xl hover:scale-105 active:scale-95 transition-all"
+                                className="bg-gradient-to-r from-yellow-500 to-amber-600 text-black px-8 py-3 rounded-full font-black uppercase text-xs md:text-sm tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all"
                             >
                                 GIẢI MÃ KHO BÁU
                             </button>
@@ -375,11 +412,11 @@
                     </div>
 
                     {/* Controls */}
-                    <div className="relative z-20 bg-black/80 backdrop-blur-xl p-4 md:p-6 border-t border-white/10 flex flex-col md:flex-row items-center gap-6">
-                        <div className="flex flex-col items-center gap-3 min-w-[200px]">
+                    <div className="relative z-20 bg-black/80 backdrop-blur-xl p-4 md:p-6 border-t border-white/10 flex flex-col md:flex-row items-center gap-4 md:gap-6">
+                        <div className="flex flex-col items-center gap-2 min-w-[160px] md:min-w-[200px]">
                             <div className="relative group cursor-pointer" onClick={spinWheel}>
-                                <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-6 h-8 bg-red-600 z-30 clip-path-pointer drop-shadow-md border border-red-400"></div>
-                                <div className="relative w-40 h-40 md:w-56 md:h-56 bg-slate-900 rounded-full flex items-center justify-center border-8 border-white/5 overflow-hidden shadow-2xl">
+                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-5 h-7 bg-red-600 z-30 clip-path-pointer drop-shadow-md border border-red-400"></div>
+                                <div className="relative w-32 h-32 md:w-40 md:h-40 bg-slate-900 rounded-full flex items-center justify-center border-4 md:border-8 border-white/5 overflow-hidden shadow-2xl">
                                     <canvas 
                                         ref={wheelCanvasRef} 
                                         width="250" 
@@ -389,7 +426,7 @@
                                     ></canvas>
                                     {wheelResultLabel && !isSpinning && (
                                         <div className="absolute inset-0 flex items-center justify-center z-40">
-                                            <div className="bg-white text-black px-4 py-2 rounded-xl font-black text-xl shadow-white animate-bounce">
+                                            <div className="bg-white text-black px-3 py-1.5 rounded-lg font-black text-base md:text-xl shadow-white animate-bounce">
                                                 {wheelResultLabel}
                                             </div>
                                         </div>
@@ -398,13 +435,11 @@
                             </div>
                         </div>
 
-                        <div className="flex-1 w-full space-y-3">
-                            <div className="flex justify-between items-center">
-                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-                                    {canGuess ? "Hệ thống mở - Đoán ký tự" : "Hãy quay nón"}
-                                </p>
-                            </div>
-                            <div className="grid grid-cols-10 gap-1.5">
+                        <div className="flex-1 w-full space-y-2">
+                            <p className="text-[9px] md:text-[10px] text-slate-500 font-bold uppercase tracking-widest text-center md:text-left">
+                                {canGuess ? "Hệ thống mở - Chọn một ký tự câu hỏi" : "Năng lượng yếu - Hãy quay nón"}
+                            </p>
+                            <div className="grid grid-cols-10 gap-1 md:gap-1.5">
                                 {VIET_ALPHABET.map(char => {
                                     const isSelected = revealedLetters.has(char);
                                     return (
@@ -412,7 +447,7 @@
                                             key={char}
                                             onClick={() => handleLetterGuess(char)}
                                             disabled={!canGuess || isSelected}
-                                            className={`aspect-square md:h-11 flex items-center justify-center font-bold text-xs rounded-lg border-b-4 transition-all ${(!canGuess || isSelected) ? 'bg-slate-900/50 text-slate-700 border-slate-950 opacity-40' : 'bg-slate-800 text-white border-black hover:bg-indigo-800 active:scale-90 active:border-b-0'}`}
+                                            className={`aspect-square flex items-center justify-center font-bold text-[10px] md:text-sm rounded-md border-b-2 md:border-b-4 transition-all ${(!canGuess || isSelected) ? 'bg-slate-900/50 text-slate-700 border-slate-950 opacity-40' : 'bg-slate-800 text-white border-black hover:bg-indigo-800 active:scale-90 active:border-b-0'}`}
                                         >
                                             {char}
                                         </button>
@@ -425,48 +460,49 @@
                     {/* Modals */}
                     {showRecharge && (
                         <div className="fixed inset-0 z-[110] bg-black/90 flex items-center justify-center p-6 backdrop-blur-md">
-                            <div className="bg-[#0f172a] p-10 rounded-[2.5rem] border-2 border-red-500 max-w-sm w-full text-center">
-                                <div className="text-red-500 text-6xl mb-4">⚡</div>
-                                <h2 className="text-2xl font-black mb-2 uppercase text-white">Nạp Năng Lượng</h2>
-                                <div className="bg-black/60 p-6 rounded-3xl mb-8">
-                                    <p className="text-2xl font-black mb-4 text-blue-400">{mathTask.q}</p>
-                                    <input type="number" autoFocus onKeyDown={(e) => { if (e.key === 'Enter') { if (parseInt(e.target.value) === mathTask.a) { setSpinsLeft(3); setShowRecharge(false); } else { e.target.value = ""; } } }} className="w-full bg-slate-900 text-white p-4 rounded-xl text-center text-3xl font-black focus:outline-none border-2 border-red-600/30" placeholder="?" />
+                            <div className="bg-[#0f172a] p-8 md:p-10 rounded-[2rem] border-2 border-red-500 max-w-sm w-full text-center shadow-2xl">
+                                <div className="text-red-500 text-5xl md:text-6xl mb-4 animate-pulse">⚡</div>
+                                <h2 className="text-xl md:text-2xl font-black mb-2 uppercase text-white">Nạp Năng Lượng</h2>
+                                <div className="bg-black/60 p-6 md:p-8 rounded-3xl mb-6">
+                                    <p className="text-xl md:text-2xl font-black mb-4 text-blue-400">{mathTask.q}</p>
+                                    <input type="number" autoFocus onKeyDown={(e) => { if (e.key === 'Enter') { if (parseInt(e.target.value) === mathTask.a) { setSpinsLeft(3); setShowRecharge(false); } else { e.target.value = ""; } } }} className="w-full bg-slate-900 text-white p-3 rounded-xl text-center text-2xl font-black border-2 border-red-600/30" placeholder="?" />
                                 </div>
+                                <p className="text-[10px] text-slate-500">NHẤN ENTER ĐỂ XÁC NHẬN</p>
                             </div>
                         </div>
                     )}
 
                     {showSuccessModal && (
                         <div className="fixed inset-0 z-[110] bg-black/95 flex items-center justify-center p-6 backdrop-blur-lg text-center">
-                            <div className="bg-[#0f172a] p-10 rounded-[3rem] border-4 border-emerald-500/30 max-w-sm w-full shadow-2xl">
-                                <div className="text-7xl mb-6">🏆</div>
-                                <h2 className="text-3xl font-black mb-2 text-white uppercase">THÀNH CÔNG</h2>
-                                <p className="text-slate-400 mb-8 text-sm italic">"{GAME_DATA[currentLevel].desc}"</p>
-                                <div className="bg-black/40 p-5 rounded-2xl mb-8 border border-emerald-500/20">
-                                    <p className="text-4xl font-black text-emerald-400">{score.toLocaleString()}đ</p>
+                            <div className="bg-[#0f172a] p-8 md:p-10 rounded-[3rem] border-4 border-emerald-500/30 max-w-sm w-full shadow-2xl">
+                                <div className="text-6xl md:text-7xl mb-6">🏆</div>
+                                <h2 className="text-2xl md:text-3xl font-black mb-2 text-white uppercase">THÀNH CÔNG</h2>
+                                <p className="text-slate-400 mb-6 text-xs md:text-sm italic font-serif">"{GAME_DATA[currentLevel].desc}"</p>
+                                <div className="bg-black/40 p-4 md:p-5 rounded-2xl mb-8 border border-emerald-500/20">
+                                    <p className="text-3xl md:text-4xl font-black text-emerald-400">{score.toLocaleString()}đ</p>
                                 </div>
-                                <button onClick={handleNextLevel} className="w-full bg-emerald-600 hover:bg-emerald-500 py-4 rounded-xl font-black text-lg">TIẾP THEO</button>
+                                <button onClick={handleNextLevel} className="w-full bg-emerald-600 hover:bg-emerald-500 py-3 md:py-4 rounded-xl font-black text-lg">TIẾP THEO</button>
                             </div>
                         </div>
                     )}
 
                     {showFailThresholdModal && (
                         <div className="fixed inset-0 z-[110] bg-black/95 flex items-center justify-center p-6 text-center">
-                            <div className="bg-slate-900 p-10 rounded-3xl border-4 border-red-600 max-w-sm w-full">
-                                <div className="text-7xl mb-6">🚫</div>
-                                <h2 className="text-xl font-bold mb-4 uppercase text-white">Chưa Đủ Điểm</h2>
-                                <p className="text-slate-400 text-sm mb-8">Cần <span className="text-red-500 font-bold">{LEVEL_THRESHOLDS[currentLevel + 1].toLocaleString()}đ</span>. Bạn có <span className="font-bold">{score.toLocaleString()}đ</span>.</p>
-                                <button onClick={() => location.reload()} className="w-full bg-red-600 py-4 rounded-xl font-black">BẮT ĐẦU LẠI</button>
+                            <div className="bg-slate-900 p-8 md:p-10 rounded-3xl border-4 border-red-600 max-w-sm w-full shadow-2xl">
+                                <div className="text-6xl md:text-7xl mb-6">🚫</div>
+                                <h2 className="text-xl md:text-2xl font-black mb-4 uppercase text-white">Chưa Đủ Điểm</h2>
+                                <p className="text-slate-400 text-xs md:text-sm mb-8 leading-relaxed">Bạn cần đạt tối thiểu <span className="text-red-500 font-bold">{LEVEL_THRESHOLDS[currentLevel + 1].toLocaleString()}đ</span> để mở phong ấn. Hiện có: <span className="font-bold text-white">{score.toLocaleString()}đ</span>.</p>
+                                <button onClick={() => location.reload()} className="w-full bg-red-600 py-3 md:py-4 rounded-xl font-black text-white">BẮT ĐẦU LẠI</button>
                             </div>
                         </div>
                     )}
 
                     {gameOver && (
                         <div className="fixed inset-0 z-[120] bg-black flex flex-col items-center justify-center p-8 text-center">
-                            <div className="text-9xl mb-8 animate-pulse drop-shadow-glow">👑</div>
-                            <h1 className="text-5xl font-black text-yellow-500 mb-6 uppercase">ĐẠI SƯ VĨNH HẰNG</h1>
-                            <p className="text-slate-300 mb-12">Tổng tài sản: <span className="text-emerald-400 font-bold">{score.toLocaleString()}đ</span></p>
-                            <button onClick={() => location.reload()} className="bg-white text-black px-16 py-5 rounded-full font-black text-2xl shadow-xl hover:scale-105 active:scale-95 transition-all">TÁI SINH</button>
+                            <div className="text-8xl md:text-9xl mb-8 animate-pulse drop-shadow-glow">👑</div>
+                            <h1 className="text-4xl md:text-6xl font-black text-yellow-500 mb-4 uppercase italic">ĐẠI SƯ VĨNH HẰNG</h1>
+                            <p className="text-slate-300 mb-12 text-lg md:text-xl">Tổng di sản tích lũy: <span className="text-emerald-400 font-bold">{score.toLocaleString()}đ</span></p>
+                            <button onClick={() => location.reload()} className="bg-white text-black px-12 md:px-16 py-4 md:py-5 rounded-full font-black text-xl md:text-2xl shadow-xl hover:scale-105 active:scale-95 transition-all">TÁI SINH</button>
                         </div>
                     )}
                 </div>
