@@ -43,7 +43,6 @@
             z-index: 1; animation: stars 200s linear infinite; opacity: 0.3;
         }
 
-        /* Tối ưu Input để không bị zoom trên iOS và hiển thị đẹp hơn */
         .puzzle-input {
             font-size: 18px !important;
             caret-color: #fbbf24;
@@ -52,6 +51,22 @@
             .puzzle-input {
                 font-size: 24px !important;
             }
+        }
+
+        .custom-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #fbbf24;
+            border-radius: 10px;
+        }
+
+        .btn-3d-shadow {
+            box-shadow: 0 6px 0 #c63017;
+        }
+        .btn-3d-shadow:active {
+            box-shadow: 0 2px 0 #c63017;
+            transform: translateY(4px);
         }
     </style>
 </head>
@@ -92,6 +107,7 @@
         ];
 
         function App() {
+            const [showIntro, setShowIntro] = useState(true);
             const [currentLevel, setCurrentLevel] = useState(0);
             const [score, setScore] = useState(0);
             const [spinsLeft, setSpinsLeft] = useState(3);
@@ -158,8 +174,10 @@
             }, []);
 
             useEffect(() => {
-                drawWheel(wheelCanvasRef.current, 250);
-            }, [drawWheel]);
+                if (!showIntro && wheelCanvasRef.current) {
+                    drawWheel(wheelCanvasRef.current, 250);
+                }
+            }, [drawWheel, showIntro]);
 
             useEffect(() => {
                 setUserGuessMap({});
@@ -182,7 +200,6 @@
                 setSpinsLeft(prev => prev - 1);
                 setIsSpinning(true);
                 setWheelResultLabel("");
-                
                 const extraRotation = 1440 + Math.random() * 360; 
                 const newRotation = rotation + extraRotation;
                 setRotation(newRotation);
@@ -193,7 +210,6 @@
                     const sliceSize = 360 / WHEEL_SEGMENTS.length;
                     const index = Math.floor(((360 - (actualDeg % 360) + 270) % 360) / sliceSize);
                     const result = WHEEL_SEGMENTS[index];
-                    
                     setWheelResultLabel(result.label);
                     handleWheelResult(result);
                 }, 4000);
@@ -210,7 +226,7 @@
                     setStatusMsg("+1 LƯỢT QUAY!");
                 } else {
                     setCurrentWheelValue(result.value);
-                    setStatusMsg(`${result.label} ĐIỂM! Hãy đoán ký tự.`);
+                    setStatusMsg(`${result.label} ĐIỂM! Hãy đoán ký tự câu hỏi.`);
                     setCanGuess(true);
                 }
             };
@@ -220,7 +236,6 @@
                 const data = GAME_DATA[currentLevel];
                 const targetChar = char.toUpperCase();
                 const questionStr = stripToneOnly(data.q);
-                
                 let count = 0;
                 for (let i = 0; i < questionStr.length; i++) {
                     if (questionStr[i] === targetChar) count++;
@@ -244,18 +259,12 @@
             const handleInputChange = (wordIdx, cIdx, val) => {
                 const key = `${wordIdx}-${cIdx}`;
                 const upperVal = stripToneOnly(val.slice(-1)); 
-                
-                setUserGuessMap(prev => ({
-                    ...prev,
-                    [key]: upperVal
-                }));
+                setUserGuessMap(prev => ({ ...prev, [key]: upperVal }));
 
-                // Auto-focus next input
                 if (upperVal && cIdx < GAME_DATA[currentLevel].a.split(' ')[wordIdx].length - 1) {
                     const nextInput = document.getElementById(`input-${wordIdx}-${cIdx + 1}`);
                     if (nextInput) nextInput.focus();
                 } else if (upperVal && wordIdx < GAME_DATA[currentLevel].a.split(' ').length - 1) {
-                    // Try to focus the first char of the next word if this was the last char of current word
                     const nextWordFirstInput = document.getElementById(`input-${wordIdx + 1}-0`);
                     if (nextWordFirstInput) nextWordFirstInput.focus();
                 }
@@ -315,6 +324,80 @@
                 else { setShowSuccessModal(false); setCurrentLevel(nextIdx); }
             };
 
+            if (showIntro) {
+                return (
+                    <div className="relative w-full h-screen flex items-center justify-center bg-[#8b8578] z-[300] p-4 overflow-hidden">
+                        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+                        
+                        <div className="relative w-full max-w-[480px] bg-white rounded-[45px] border-[10px] border-[#ffcc33] flex flex-col items-center p-6 md:p-8 shadow-2xl animate-in zoom-in duration-300">
+                            <div className="absolute top-6 left-8 opacity-10 text-8xl grayscale select-none">🗺️</div>
+                            
+                            <div className="text-center mb-6 relative z-10">
+                                <h1 className="text-[#f15a24] text-4xl md:text-5xl font-black uppercase tracking-tight mb-2">
+                                    Kho Báu Ca Dao
+                                </h1>
+                                <div className="bg-[#ffe8ed] px-8 py-2 rounded-full inline-block">
+                                    <span className="text-[#ff4d6d] font-bold text-sm md:text-base uppercase tracking-widest italic">Độ khó: Bậc thầy</span>
+                                </div>
+                            </div>
+
+                            <div className="w-full bg-[#f8f9fa] rounded-[30px] border border-gray-100 p-6 mb-8 custom-scroll overflow-y-auto max-h-[48vh] relative z-10">
+                                <h2 className="text-[#5d4037] text-xl font-bold text-center mb-6 flex items-center justify-center gap-2">
+                                    📜 Luật Chơi Khắc Nghiệt:
+                                </h2>
+                                
+                                <ul className="space-y-5">
+                                    <li className="flex items-start gap-4">
+                                        <span className="text-3xl">🎡</span>
+                                        <div>
+                                            <p className="text-sm font-black text-[#5e35b1]">Vòng Quay May Mắn:</p>
+                                            <p className="text-[11px] text-gray-500 font-medium leading-tight">Quay nón để xác định giá trị chữ cái đúng. Cẩn thận ô PHÁ SẢN sẽ làm bạn trắng tay!</p>
+                                        </div>
+                                    </li>
+                                    <li className="flex items-start gap-4 border-t border-gray-100 pt-4">
+                                        <span className="text-3xl">💡</span>
+                                        <div>
+                                            <p className="text-sm font-black text-[#1e88e5]">Gợi Ý Cổ Thư:</p>
+                                            <p className="text-[11px] text-gray-500 font-medium leading-tight">Đoán ký tự để lật mở câu ca dao gợi ý phía trên. Lưu ý: Mọi dấu thanh đều bị ẩn giấu.</p>
+                                        </div>
+                                    </li>
+                                    <li className="flex items-start gap-4 border-t border-gray-100 pt-4">
+                                        <span className="text-3xl">⌨️</span>
+                                        <div>
+                                            <p className="text-sm font-black text-[#757575]">Tự Giải Mật Mã:</p>
+                                            <p className="text-[11px] text-gray-500 font-medium leading-tight">Phần dưới là mật mã rỗng. Bạn phải tự gõ đáp án (không dấu) bằng bàn phím Mobile.</p>
+                                        </div>
+                                    </li>
+                                    <li className="flex items-start gap-4 border-t border-gray-100 pt-4">
+                                        <span className="text-3xl">🏺</span>
+                                        <div>
+                                            <p className="text-sm font-black text-[#fbc02d]">Mốc Điểm Vượt Cấp:</p>
+                                            <p className="text-[11px] text-gray-500 font-medium leading-tight">Phải tích lũy đủ tiền quỹ (Quota) mới được mở phong ấn sang Chương tiếp theo.</p>
+                                        </div>
+                                    </li>
+                                    <li className="flex items-start gap-4 border-t border-gray-100 pt-4">
+                                        <span className="text-3xl">⚡</span>
+                                        <div>
+                                            <p className="text-sm font-black text-[#f4511e]">Quản Lý Năng Lượng:</p>
+                                            <p className="text-[11px] text-gray-500 font-medium leading-tight">Hết lượt quay? Phải giải Toán đồ hoặc dùng 800đ để đổi thêm 1⚡.</p>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <button 
+                                onClick={() => setShowIntro(false)}
+                                className="relative w-full max-w-[340px] btn-3d-shadow"
+                            >
+                                <div className="bg-gradient-to-r from-[#f15a24] to-[#ff8c3a] text-white font-black text-xl py-5 rounded-2xl border-2 border-white shadow-lg flex items-center justify-center gap-3">
+                                    CHẤP NHẬN THỬ THÁCH 🚀
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
             return (
                 <div className="relative w-full h-screen flex flex-col z-10 overflow-hidden">
                     <div className="stars"></div>
@@ -347,7 +430,7 @@
 
                         <div className="text-right flex flex-col items-end">
                             <p className="text-[9px] text-blue-400 font-bold uppercase truncate max-w-[120px] md:max-w-[200px]">{statusMsg}</p>
-                            <p className="text-xl md:text-2xl font-black text-green-500 italic uppercase">CHƯƠNG {currentLevel + 1}</p>
+                            <p className="text-xl md:text-2xl font-black text-green-500 italic uppercase italic">CHƯƠNG {currentLevel + 1}</p>
                         </div>
                     </div>
 
@@ -457,9 +540,9 @@
                         </div>
                     </div>
 
-                    {/* Modals */}
+                    {/* Modals Section */}
                     {showRecharge && (
-                        <div className="fixed inset-0 z-[110] bg-black/90 flex items-center justify-center p-6 backdrop-blur-md">
+                        <div className="fixed inset-0 z-[400] bg-black/90 flex items-center justify-center p-6 backdrop-blur-md">
                             <div className="bg-[#0f172a] p-8 md:p-10 rounded-[2rem] border-2 border-red-500 max-w-sm w-full text-center shadow-2xl">
                                 <div className="text-red-500 text-5xl md:text-6xl mb-4 animate-pulse">⚡</div>
                                 <h2 className="text-xl md:text-2xl font-black mb-2 uppercase text-white">Nạp Năng Lượng</h2>
@@ -473,7 +556,7 @@
                     )}
 
                     {showSuccessModal && (
-                        <div className="fixed inset-0 z-[110] bg-black/95 flex items-center justify-center p-6 backdrop-blur-lg text-center">
+                        <div className="fixed inset-0 z-[400] bg-black/95 flex items-center justify-center p-6 backdrop-blur-lg text-center">
                             <div className="bg-[#0f172a] p-8 md:p-10 rounded-[3rem] border-4 border-emerald-500/30 max-w-sm w-full shadow-2xl">
                                 <div className="text-6xl md:text-7xl mb-6">🏆</div>
                                 <h2 className="text-2xl md:text-3xl font-black mb-2 text-white uppercase">THÀNH CÔNG</h2>
@@ -487,8 +570,8 @@
                     )}
 
                     {showFailThresholdModal && (
-                        <div className="fixed inset-0 z-[110] bg-black/95 flex items-center justify-center p-6 text-center">
-                            <div className="bg-slate-900 p-8 md:p-10 rounded-3xl border-4 border-red-600 max-w-sm w-full shadow-2xl">
+                        <div className="fixed inset-0 z-[400] bg-black/95 flex items-center justify-center p-6 text-center">
+                            <div className="bg-slate-900 p-10 rounded-3xl border-4 border-red-600 max-w-sm w-full shadow-2xl">
                                 <div className="text-6xl md:text-7xl mb-6">🚫</div>
                                 <h2 className="text-xl md:text-2xl font-black mb-4 uppercase text-white">Chưa Đủ Điểm</h2>
                                 <p className="text-slate-400 text-xs md:text-sm mb-8 leading-relaxed">Bạn cần đạt tối thiểu <span className="text-red-500 font-bold">{LEVEL_THRESHOLDS[currentLevel + 1].toLocaleString()}đ</span> để mở phong ấn. Hiện có: <span className="font-bold text-white">{score.toLocaleString()}đ</span>.</p>
@@ -498,7 +581,7 @@
                     )}
 
                     {gameOver && (
-                        <div className="fixed inset-0 z-[120] bg-black flex flex-col items-center justify-center p-8 text-center">
+                        <div className="fixed inset-0 z-[500] bg-black flex flex-col items-center justify-center p-8 text-center">
                             <div className="text-8xl md:text-9xl mb-8 animate-pulse drop-shadow-glow">👑</div>
                             <h1 className="text-4xl md:text-6xl font-black text-yellow-500 mb-4 uppercase italic">ĐẠI SƯ VĨNH HẰNG</h1>
                             <p className="text-slate-300 mb-12 text-lg md:text-xl">Tổng di sản tích lũy: <span className="text-emerald-400 font-bold">{score.toLocaleString()}đ</span></p>
