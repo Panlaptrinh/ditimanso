@@ -44,7 +44,7 @@
         }
 
         .puzzle-input {
-            font-size: 18px !important;
+            font-size: 16px !important;
             caret-color: #fbbf24;
         }
         @media (min-width: 768px) {
@@ -54,10 +54,10 @@
         }
 
         .custom-scroll::-webkit-scrollbar {
-            width: 4px;
+            width: 5px;
         }
         .custom-scroll::-webkit-scrollbar-thumb {
-            background: #fbbf24;
+            background: #f15a24;
             border-radius: 10px;
         }
 
@@ -113,7 +113,7 @@
             const [spinsLeft, setSpinsLeft] = useState(3);
             const [revealedLetters, setRevealedLetters] = useState(new Set());
             const [userGuessMap, setUserGuessMap] = useState({});
-            const [statusMsg, setStatusMsg] = useState("Quay nón hoặc nhấn vào ô mật mã để nhập!");
+            const [statusMsg, setStatusMsg] = useState("Quay nón để mở gợi ý!");
             const [currentWheelValue, setCurrentWheelValue] = useState(0);
             const [canGuess, setCanGuess] = useState(false);
             const [rotation, setRotation] = useState(0);
@@ -226,7 +226,7 @@
                     setStatusMsg("+1 LƯỢT QUAY!");
                 } else {
                     setCurrentWheelValue(result.value);
-                    setStatusMsg(`${result.label} ĐIỂM! Hãy đoán ký tự câu hỏi.`);
+                    setStatusMsg(`${result.label} ĐIỂM! Đoán ký tự câu hỏi.`);
                     setCanGuess(true);
                 }
             };
@@ -308,7 +308,7 @@
                     setTimeout(() => setShowSuccessModal(true), 800);
                 } else {
                     setScore(prev => Math.max(0, prev - 1000));
-                    setStatusMsg("Mật mã chưa khớp. Hãy thử lại!");
+                    setStatusMsg("Mật mã chưa khớp!");
                     const container = document.getElementById('answer-area');
                     if (container) {
                         container.classList.add('shake');
@@ -326,60 +326,58 @@
 
             if (showIntro) {
                 return (
-                    <div className="relative w-full h-screen flex items-center justify-center bg-[#8b8578] z-[300] p-4 overflow-hidden">
-                        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
-                        
-                        <div className="relative w-full max-w-[480px] bg-white rounded-[45px] border-[10px] border-[#ffcc33] flex flex-col items-center p-6 md:p-8 shadow-2xl animate-in zoom-in duration-300">
-                            <div className="absolute top-6 left-8 opacity-10 text-8xl grayscale select-none">🗺️</div>
+                    <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/60 backdrop-blur-md p-2 overflow-y-auto">
+                        <div className="relative w-full max-w-[460px] bg-white rounded-[45px] border-[8px] md:border-[10px] border-[#ffcc33] flex flex-col items-center p-5 md:p-8 shadow-2xl animate-in zoom-in duration-300 my-auto">
+                            <div className="absolute top-4 left-6 opacity-10 text-7xl grayscale select-none">🗺️</div>
                             
-                            <div className="text-center mb-6 relative z-10">
-                                <h1 className="text-[#f15a24] text-4xl md:text-5xl font-black uppercase tracking-tight mb-2">
-                                    Kho Báu Ca Dao
+                            <div className="text-center mb-4 md:mb-6 relative z-10">
+                                <h1 className="text-[#f15a24] text-3xl md:text-4xl font-black uppercase tracking-tight mb-1">
+                                    Hướng Dẫn Giải Mã
                                 </h1>
-                                <div className="bg-[#ffe8ed] px-8 py-2 rounded-full inline-block">
-                                    <span className="text-[#ff4d6d] font-bold text-sm md:text-base uppercase tracking-widest italic">Độ khó: Bậc thầy</span>
+                                <div className="bg-[#ffe8ed] px-5 py-1 rounded-full inline-block">
+                                    <span className="text-[#ff4d6d] font-bold text-xs md:text-sm uppercase tracking-widest italic">Độ khó: Bậc thầy</span>
                                 </div>
                             </div>
 
-                            <div className="w-full bg-[#f8f9fa] rounded-[30px] border border-gray-100 p-6 mb-8 custom-scroll overflow-y-auto max-h-[48vh] relative z-10">
-                                <h2 className="text-[#5d4037] text-xl font-bold text-center mb-6 flex items-center justify-center gap-2">
-                                    📜 Luật Chơi Khắc Nghiệt:
+                            <div className="w-full bg-[#f8f9fa] rounded-[25px] border border-gray-100 p-4 md:p-6 mb-6 custom-scroll overflow-y-auto max-h-[50vh] relative z-10 shadow-inner">
+                                <h2 className="text-[#5d4037] text-base md:text-lg font-bold text-center mb-5 flex items-center justify-center gap-2">
+                                    📜 Quy Tắc Kho Báu:
                                 </h2>
                                 
-                                <ul className="space-y-5">
-                                    <li className="flex items-start gap-4">
-                                        <span className="text-3xl">🎡</span>
+                                <ul className="space-y-4 md:space-y-5">
+                                    <li className="flex items-start gap-3">
+                                        <span className="text-2xl">🎡</span>
                                         <div>
-                                            <p className="text-sm font-black text-[#5e35b1]">Vòng Quay May Mắn:</p>
-                                            <p className="text-[11px] text-gray-500 font-medium leading-tight">Quay nón để xác định giá trị chữ cái đúng. Cẩn thận ô PHÁ SẢN sẽ làm bạn trắng tay!</p>
+                                            <p className="text-xs md:text-sm font-black text-[#5e35b1]">Vòng Quay May Mắn:</p>
+                                            <p className="text-[10px] md:text-[11px] text-gray-500 font-medium leading-tight">Quay nón để định giá chữ cái. Tránh ô PHÁ SẢN làm mất sạch điểm quỹ.</p>
                                         </div>
                                     </li>
-                                    <li className="flex items-start gap-4 border-t border-gray-100 pt-4">
-                                        <span className="text-3xl">💡</span>
+                                    <li className="flex items-start gap-3 border-t border-gray-100 pt-3">
+                                        <span className="text-2xl">💡</span>
                                         <div>
-                                            <p className="text-sm font-black text-[#1e88e5]">Gợi Ý Cổ Thư:</p>
-                                            <p className="text-[11px] text-gray-500 font-medium leading-tight">Đoán ký tự để lật mở câu ca dao gợi ý phía trên. Lưu ý: Mọi dấu thanh đều bị ẩn giấu.</p>
+                                            <p className="text-xs md:text-sm font-black text-[#1e88e5]">Gợi Ý Cổ Thư:</p>
+                                            <p className="text-[10px] md:text-[11px] text-gray-500 font-medium leading-tight">Đoán chữ để mở câu hỏi phía trên. Chú ý: Dấu tiếng Việt sẽ bị ẩn giấu.</p>
                                         </div>
                                     </li>
-                                    <li className="flex items-start gap-4 border-t border-gray-100 pt-4">
-                                        <span className="text-3xl">⌨️</span>
+                                    <li className="flex items-start gap-3 border-t border-gray-100 pt-3">
+                                        <span className="text-2xl">⌨️</span>
                                         <div>
-                                            <p className="text-sm font-black text-[#757575]">Tự Giải Mật Mã:</p>
-                                            <p className="text-[11px] text-gray-500 font-medium leading-tight">Phần dưới là mật mã rỗng. Bạn phải tự gõ đáp án (không dấu) bằng bàn phím Mobile.</p>
+                                            <p className="text-xs md:text-sm font-black text-[#757575]">Tự Giải Mật Mã:</p>
+                                            <p className="text-[10px] md:text-[11px] text-gray-500 font-medium leading-tight">Nhấn vào ô dưới để gõ đáp án không dấu. Hệ thống tự nhảy ô khi nhập.</p>
                                         </div>
                                     </li>
-                                    <li className="flex items-start gap-4 border-t border-gray-100 pt-4">
-                                        <span className="text-3xl">🏺</span>
+                                    <li className="flex items-start gap-3 border-t border-gray-100 pt-3">
+                                        <span className="text-2xl">🏺</span>
                                         <div>
-                                            <p className="text-sm font-black text-[#fbc02d]">Mốc Điểm Vượt Cấp:</p>
-                                            <p className="text-[11px] text-gray-500 font-medium leading-tight">Phải tích lũy đủ tiền quỹ (Quota) mới được mở phong ấn sang Chương tiếp theo.</p>
+                                            <p className="text-xs md:text-sm font-black text-[#fbc02d]">Mốc Điểm Vượt Cấp:</p>
+                                            <p className="text-[10px] md:text-[11px] text-gray-500 font-medium leading-tight">Mỗi chương yêu cầu số điểm nhất định để mở phong ấn bước tiếp.</p>
                                         </div>
                                     </li>
-                                    <li className="flex items-start gap-4 border-t border-gray-100 pt-4">
-                                        <span className="text-3xl">⚡</span>
+                                    <li className="flex items-start gap-3 border-t border-gray-100 pt-3">
+                                        <span className="text-2xl">⚡</span>
                                         <div>
-                                            <p className="text-sm font-black text-[#f4511e]">Quản Lý Năng Lượng:</p>
-                                            <p className="text-[11px] text-gray-500 font-medium leading-tight">Hết lượt quay? Phải giải Toán đồ hoặc dùng 800đ để đổi thêm 1⚡.</p>
+                                            <p className="text-xs md:text-sm font-black text-[#f4511e]">Năng Lượng Quota:</p>
+                                            <p className="text-[10px] md:text-[11px] text-gray-500 font-medium leading-tight">Khi hết lượt quay, giải Toán đồ hoặc đổi điểm để nạp thêm năng lượng.</p>
                                         </div>
                                     </li>
                                 </ul>
@@ -387,9 +385,9 @@
 
                             <button 
                                 onClick={() => setShowIntro(false)}
-                                className="relative w-full max-w-[340px] btn-3d-shadow"
+                                className="relative w-full max-w-[320px] btn-3d-shadow mb-2"
                             >
-                                <div className="bg-gradient-to-r from-[#f15a24] to-[#ff8c3a] text-white font-black text-xl py-5 rounded-2xl border-2 border-white shadow-lg flex items-center justify-center gap-3">
+                                <div className="bg-gradient-to-r from-[#f15a24] to-[#ff8c3a] text-white font-black text-lg py-4 rounded-2xl border-2 border-white shadow-lg flex items-center justify-center gap-3">
                                     CHẤP NHẬN THỬ THÁCH 🚀
                                 </div>
                             </button>
@@ -404,7 +402,7 @@
                     <div className="twinkling"></div>
 
                     {/* Header */}
-                    <div className="relative z-20 flex justify-between items-center px-4 md:px-6 py-4 bg-black/60 border-b border-white/10 backdrop-blur-md">
+                    <div className="relative z-20 flex justify-between items-center px-4 md:px-6 py-3 bg-black/70 border-b border-white/10 backdrop-blur-md">
                         <div className="flex flex-col">
                             <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-tight">Tiền quỹ</p>
                             <p className="text-2xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-600 drop-shadow-glow">
@@ -416,21 +414,21 @@
                         </div>
 
                         <div className="flex flex-col items-center">
-                            <p className="text-[9px] text-slate-400 font-bold uppercase mb-1">⚡ Năng lượng</p>
+                            <p className="text-[9px] text-slate-400 font-bold uppercase mb-1">⚡ Quota</p>
                             <div className="flex items-center gap-2">
                                 <span className={`text-3xl md:text-4xl font-black ${spinsLeft <= 1 ? 'text-red-500 animate-pulse' : 'text-white'}`}>{spinsLeft}</span>
                                 <button 
                                     onClick={() => { if(score >= 800) { setScore(s => s - 800); setSpinsLeft(l => l + 1); } }}
-                                    className="bg-emerald-600 hover:bg-emerald-500 text-white text-[8px] md:text-[10px] font-bold px-2 py-1.5 rounded-lg border-b-4 border-emerald-900 active:scale-95"
+                                    className="bg-emerald-600 hover:bg-emerald-500 text-white text-[8px] md:text-[10px] font-bold px-2 py-1.5 rounded-lg border-b-4 border-emerald-900 active:scale-95 shadow-lg"
                                 >
-                                    +1 QUOTA
+                                    +1⚡
                                 </button>
                             </div>
                         </div>
 
                         <div className="text-right flex flex-col items-end">
-                            <p className="text-[9px] text-blue-400 font-bold uppercase truncate max-w-[120px] md:max-w-[200px]">{statusMsg}</p>
-                            <p className="text-xl md:text-2xl font-black text-green-500 italic uppercase italic">CHƯƠNG {currentLevel + 1}</p>
+                            <p className="text-[9px] text-blue-400 font-bold uppercase truncate max-w-[100px] md:max-w-[200px]">{statusMsg}</p>
+                            <p className="text-xl md:text-2xl font-black text-green-500 italic uppercase">Chương {currentLevel + 1}</p>
                         </div>
                     </div>
 
@@ -478,7 +476,7 @@
                                                     onFocus={(e) => e.target.select()}
                                                     onKeyDown={(e) => handleKeyDown(wIdx, cIdx, e)}
                                                     onChange={(e) => handleInputChange(wIdx, cIdx, e.target.value)}
-                                                    className={`puzzle-input w-9 h-12 md:w-14 md:h-20 bg-black/40 border-b-4 border-slate-700 flex items-center justify-center font-black text-center uppercase focus:outline-none focus:border-yellow-500 transition-all ${val ? 'text-white border-indigo-500 shadow-neon' : 'text-slate-500'}`}
+                                                    className={`puzzle-input w-8 h-11 md:w-14 md:h-20 bg-black/40 border-b-4 border-slate-700 flex items-center justify-center font-black text-center uppercase focus:outline-none focus:border-yellow-500 transition-all ${val ? 'text-white border-indigo-500 shadow-neon' : 'text-slate-500'}`}
                                                 />
                                             );
                                         })}
@@ -487,7 +485,7 @@
                             </div>
                             <button 
                                 onClick={checkFinalAnswer}
-                                className="bg-gradient-to-r from-yellow-500 to-amber-600 text-black px-8 py-3 rounded-full font-black uppercase text-xs md:text-sm tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all"
+                                className="bg-gradient-to-r from-yellow-500 to-amber-600 text-black px-10 py-3 rounded-full font-black uppercase text-xs md:text-sm tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all"
                             >
                                 GIẢI MÃ KHO BÁU
                             </button>
@@ -496,22 +494,14 @@
 
                     {/* Controls */}
                     <div className="relative z-20 bg-black/80 backdrop-blur-xl p-4 md:p-6 border-t border-white/10 flex flex-col md:flex-row items-center gap-4 md:gap-6">
-                        <div className="flex flex-col items-center gap-2 min-w-[160px] md:min-w-[200px]">
+                        <div className="flex items-center gap-6">
                             <div className="relative group cursor-pointer" onClick={spinWheel}>
                                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-5 h-7 bg-red-600 z-30 clip-path-pointer drop-shadow-md border border-red-400"></div>
                                 <div className="relative w-32 h-32 md:w-40 md:h-40 bg-slate-900 rounded-full flex items-center justify-center border-4 md:border-8 border-white/5 overflow-hidden shadow-2xl">
-                                    <canvas 
-                                        ref={wheelCanvasRef} 
-                                        width="250" 
-                                        height="250" 
-                                        className={`w-full h-full transition-transform duration-[4000ms] ease-[cubic-bezier(0.1,0,0.1,1)] ${isSpinning ? 'blur-[2px]' : ''}`}
-                                        style={{ transform: `rotate(${rotation}deg)` }}
-                                    ></canvas>
+                                    <canvas ref={wheelCanvasRef} width="250" height="250" className={`w-full h-full transition-transform duration-[4000ms] ease-[cubic-bezier(0.1,0,0.1,1)] ${isSpinning ? 'blur-[2px]' : ''}`} style={{ transform: `rotate(${rotation}deg)` }}></canvas>
                                     {wheelResultLabel && !isSpinning && (
                                         <div className="absolute inset-0 flex items-center justify-center z-40">
-                                            <div className="bg-white text-black px-3 py-1.5 rounded-lg font-black text-base md:text-xl shadow-white animate-bounce">
-                                                {wheelResultLabel}
-                                            </div>
+                                            <div className="bg-white text-black px-3 py-1.5 rounded-lg font-black text-base md:text-xl shadow-white animate-bounce">{wheelResultLabel}</div>
                                         </div>
                                     )}
                                 </div>
@@ -520,20 +510,13 @@
 
                         <div className="flex-1 w-full space-y-2">
                             <p className="text-[9px] md:text-[10px] text-slate-500 font-bold uppercase tracking-widest text-center md:text-left">
-                                {canGuess ? "Hệ thống mở - Chọn một ký tự câu hỏi" : "Năng lượng yếu - Hãy quay nón"}
+                                {canGuess ? "Chọn một ký tự câu hỏi" : "Hãy quay nón nạp năng lượng"}
                             </p>
                             <div className="grid grid-cols-10 gap-1 md:gap-1.5">
                                 {VIET_ALPHABET.map(char => {
                                     const isSelected = revealedLetters.has(char);
                                     return (
-                                        <button
-                                            key={char}
-                                            onClick={() => handleLetterGuess(char)}
-                                            disabled={!canGuess || isSelected}
-                                            className={`aspect-square flex items-center justify-center font-bold text-[10px] md:text-sm rounded-md border-b-2 md:border-b-4 transition-all ${(!canGuess || isSelected) ? 'bg-slate-900/50 text-slate-700 border-slate-950 opacity-40' : 'bg-slate-800 text-white border-black hover:bg-indigo-800 active:scale-90 active:border-b-0'}`}
-                                        >
-                                            {char}
-                                        </button>
+                                        <button key={char} onClick={() => handleLetterGuess(char)} disabled={!canGuess || isSelected} className={`aspect-square flex items-center justify-center font-bold text-[10px] md:text-sm rounded-md border-b-2 md:border-b-4 transition-all ${(!canGuess || isSelected) ? 'bg-slate-900/50 text-slate-700 border-slate-950 opacity-40' : 'bg-slate-800 text-white border-black hover:bg-indigo-800 active:scale-90 active:border-b-0'}`}>{char}</button>
                                     );
                                 })}
                             </div>
@@ -542,21 +525,20 @@
 
                     {/* Modals Section */}
                     {showRecharge && (
-                        <div className="fixed inset-0 z-[400] bg-black/90 flex items-center justify-center p-6 backdrop-blur-md">
+                        <div className="fixed inset-0 z-[600] bg-black/90 flex items-center justify-center p-6 backdrop-blur-md">
                             <div className="bg-[#0f172a] p-8 md:p-10 rounded-[2rem] border-2 border-red-500 max-w-sm w-full text-center shadow-2xl">
-                                <div className="text-red-500 text-5xl md:text-6xl mb-4 animate-pulse">⚡</div>
+                                <div className="text-red-500 text-6xl mb-4 animate-pulse">⚡</div>
                                 <h2 className="text-xl md:text-2xl font-black mb-2 uppercase text-white">Nạp Năng Lượng</h2>
                                 <div className="bg-black/60 p-6 md:p-8 rounded-3xl mb-6">
                                     <p className="text-xl md:text-2xl font-black mb-4 text-blue-400">{mathTask.q}</p>
                                     <input type="number" autoFocus onKeyDown={(e) => { if (e.key === 'Enter') { if (parseInt(e.target.value) === mathTask.a) { setSpinsLeft(3); setShowRecharge(false); } else { e.target.value = ""; } } }} className="w-full bg-slate-900 text-white p-3 rounded-xl text-center text-2xl font-black border-2 border-red-600/30" placeholder="?" />
                                 </div>
-                                <p className="text-[10px] text-slate-500">NHẤN ENTER ĐỂ XÁC NHẬN</p>
                             </div>
                         </div>
                     )}
 
                     {showSuccessModal && (
-                        <div className="fixed inset-0 z-[400] bg-black/95 flex items-center justify-center p-6 backdrop-blur-lg text-center">
+                        <div className="fixed inset-0 z-[600] bg-black/95 flex items-center justify-center p-6 backdrop-blur-lg text-center">
                             <div className="bg-[#0f172a] p-8 md:p-10 rounded-[3rem] border-4 border-emerald-500/30 max-w-sm w-full shadow-2xl">
                                 <div className="text-6xl md:text-7xl mb-6">🏆</div>
                                 <h2 className="text-2xl md:text-3xl font-black mb-2 text-white uppercase">THÀNH CÔNG</h2>
@@ -570,18 +552,18 @@
                     )}
 
                     {showFailThresholdModal && (
-                        <div className="fixed inset-0 z-[400] bg-black/95 flex items-center justify-center p-6 text-center">
+                        <div className="fixed inset-0 z-[600] bg-black/95 flex items-center justify-center p-6 text-center">
                             <div className="bg-slate-900 p-10 rounded-3xl border-4 border-red-600 max-w-sm w-full shadow-2xl">
                                 <div className="text-6xl md:text-7xl mb-6">🚫</div>
                                 <h2 className="text-xl md:text-2xl font-black mb-4 uppercase text-white">Chưa Đủ Điểm</h2>
-                                <p className="text-slate-400 text-xs md:text-sm mb-8 leading-relaxed">Bạn cần đạt tối thiểu <span className="text-red-500 font-bold">{LEVEL_THRESHOLDS[currentLevel + 1].toLocaleString()}đ</span> để mở phong ấn. Hiện có: <span className="font-bold text-white">{score.toLocaleString()}đ</span>.</p>
+                                <p className="text-slate-400 text-xs md:text-sm mb-8 leading-relaxed">Bạn cần tối thiểu <span className="text-red-500 font-bold">{LEVEL_THRESHOLDS[currentLevel + 1].toLocaleString()}đ</span> để mở phong ấn. Hiện có: <span className="font-bold text-white">{score.toLocaleString()}đ</span>.</p>
                                 <button onClick={() => location.reload()} className="w-full bg-red-600 py-3 md:py-4 rounded-xl font-black text-white">BẮT ĐẦU LẠI</button>
                             </div>
                         </div>
                     )}
 
                     {gameOver && (
-                        <div className="fixed inset-0 z-[500] bg-black flex flex-col items-center justify-center p-8 text-center">
+                        <div className="fixed inset-0 z-[700] bg-black flex flex-col items-center justify-center p-8 text-center">
                             <div className="text-8xl md:text-9xl mb-8 animate-pulse drop-shadow-glow">👑</div>
                             <h1 className="text-4xl md:text-6xl font-black text-yellow-500 mb-4 uppercase italic">ĐẠI SƯ VĨNH HẰNG</h1>
                             <p className="text-slate-300 mb-12 text-lg md:text-xl">Tổng di sản tích lũy: <span className="text-emerald-400 font-bold">{score.toLocaleString()}đ</span></p>
