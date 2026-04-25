@@ -32,19 +32,22 @@
         @keyframes shake-anim { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
         
         @keyframes stars { from { background-position: 0 0; } to { background-position: -10000px 5000px; } }
+        .stars-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
+        }
         .stars {
             position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; display: block;
             background: #000 url('https://s3-us-west-2.amazonaws.com/s.cdpn.io/123163/stars.png') repeat top center;
-            z-index: 0; opacity: 0.3;
+            opacity: 0.3;
         }
         .twinkling {
             position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; display: block;
             background: transparent url('https://s3-us-west-2.amazonaws.com/s.cdpn.io/123163/twinkling.png') repeat top center;
-            z-index: 1; animation: stars 200s linear infinite; opacity: 0.3;
+            animation: stars 200s linear infinite; opacity: 0.3;
         }
 
         .puzzle-input {
-            font-size: 16px !important;
+            font-size: 18px !important;
             caret-color: #fbbf24;
         }
         @media (min-width: 768px) {
@@ -226,7 +229,7 @@
                     setStatusMsg("+1 LƯỢT QUAY!");
                 } else {
                     setCurrentWheelValue(result.value);
-                    setStatusMsg(`${result.label} ĐIỂM! Đoán ký tự câu hỏi.`);
+                    setStatusMsg(`${result.label} ĐIỂM! Hãy đoán ký tự câu hỏi.`);
                     setCanGuess(true);
                 }
             };
@@ -324,88 +327,69 @@
                 else { setShowSuccessModal(false); setCurrentLevel(nextIdx); }
             };
 
-            if (showIntro) {
-                return (
-                    <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/60 backdrop-blur-md p-2 overflow-y-auto">
-                        <div className="relative w-full max-w-[460px] bg-white rounded-[45px] border-[8px] md:border-[10px] border-[#ffcc33] flex flex-col items-center p-5 md:p-8 shadow-2xl animate-in zoom-in duration-300 my-auto">
-                            <div className="absolute top-4 left-6 opacity-10 text-7xl grayscale select-none">🗺️</div>
-                            
-                            <div className="text-center mb-4 md:mb-6 relative z-10">
-                                <h1 className="text-[#f15a24] text-3xl md:text-4xl font-black uppercase tracking-tight mb-1">
-                                    Hướng Dẫn Giải Mã
-                                </h1>
-                                <div className="bg-[#ffe8ed] px-5 py-1 rounded-full inline-block">
-                                    <span className="text-[#ff4d6d] font-bold text-xs md:text-sm uppercase tracking-widest italic">Độ khó: Bậc thầy</span>
-                                </div>
-                            </div>
-
-                            <div className="w-full bg-[#f8f9fa] rounded-[25px] border border-gray-100 p-4 md:p-6 mb-6 custom-scroll overflow-y-auto max-h-[50vh] relative z-10 shadow-inner">
-                                <h2 className="text-[#5d4037] text-base md:text-lg font-bold text-center mb-5 flex items-center justify-center gap-2">
-                                    📜 Quy Tắc Kho Báu:
-                                </h2>
-                                
-                                <ul className="space-y-4 md:space-y-5">
-                                    <li className="flex items-start gap-3">
-                                        <span className="text-2xl">🎡</span>
-                                        <div>
-                                            <p className="text-xs md:text-sm font-black text-[#5e35b1]">Vòng Quay May Mắn:</p>
-                                            <p className="text-[10px] md:text-[11px] text-gray-500 font-medium leading-tight">Quay nón để định giá chữ cái. Tránh ô PHÁ SẢN làm mất sạch điểm quỹ.</p>
-                                        </div>
-                                    </li>
-                                    <li className="flex items-start gap-3 border-t border-gray-100 pt-3">
-                                        <span className="text-2xl">💡</span>
-                                        <div>
-                                            <p className="text-xs md:text-sm font-black text-[#1e88e5]">Gợi Ý Cổ Thư:</p>
-                                            <p className="text-[10px] md:text-[11px] text-gray-500 font-medium leading-tight">Đoán chữ để mở câu hỏi phía trên. Chú ý: Dấu tiếng Việt sẽ bị ẩn giấu.</p>
-                                        </div>
-                                    </li>
-                                    <li className="flex items-start gap-3 border-t border-gray-100 pt-3">
-                                        <span className="text-2xl">⌨️</span>
-                                        <div>
-                                            <p className="text-xs md:text-sm font-black text-[#757575]">Tự Giải Mật Mã:</p>
-                                            <p className="text-[10px] md:text-[11px] text-gray-500 font-medium leading-tight">Nhấn vào ô dưới để gõ đáp án không dấu. Hệ thống tự nhảy ô khi nhập.</p>
-                                        </div>
-                                    </li>
-                                    <li className="flex items-start gap-3 border-t border-gray-100 pt-3">
-                                        <span className="text-2xl">🏺</span>
-                                        <div>
-                                            <p className="text-xs md:text-sm font-black text-[#fbc02d]">Mốc Điểm Vượt Cấp:</p>
-                                            <p className="text-[10px] md:text-[11px] text-gray-500 font-medium leading-tight">Mỗi chương yêu cầu số điểm nhất định để mở phong ấn bước tiếp.</p>
-                                        </div>
-                                    </li>
-                                    <li className="flex items-start gap-3 border-t border-gray-100 pt-3">
-                                        <span className="text-2xl">⚡</span>
-                                        <div>
-                                            <p className="text-xs md:text-sm font-black text-[#f4511e]">Năng Lượng Quota:</p>
-                                            <p className="text-[10px] md:text-[11px] text-gray-500 font-medium leading-tight">Khi hết lượt quay, giải Toán đồ hoặc đổi điểm để nạp thêm năng lượng.</p>
-                                        </div>
-                                    </li>
-                                </ul>
-                            </div>
-
-                            <button 
-                                onClick={() => setShowIntro(false)}
-                                className="relative w-full max-w-[320px] btn-3d-shadow mb-2"
-                            >
-                                <div className="bg-gradient-to-r from-[#f15a24] to-[#ff8c3a] text-white font-black text-lg py-4 rounded-2xl border-2 border-white shadow-lg flex items-center justify-center gap-3">
-                                    CHẤP NHẬN THỬ THÁCH 🚀
-                                </div>
-                            </button>
-                        </div>
-                    </div>
-                );
-            }
-
             return (
-                <div className="relative w-full h-screen flex flex-col z-10 overflow-hidden">
-                    <div className="stars"></div>
-                    <div className="twinkling"></div>
+                <div className="relative w-full h-screen flex flex-col z-10 overflow-hidden bg-[#020617]">
+                    <div className="stars-container">
+                        <div className="stars"></div>
+                        <div className="twinkling"></div>
+                    </div>
 
-                    {/* Header */}
-                    <div className="relative z-20 flex justify-between items-center px-4 md:px-6 py-3 bg-black/70 border-b border-white/10 backdrop-blur-md">
+                    {/* MODAL HƯỚNG DẪN */}
+                    {showIntro && (
+                        <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/60 backdrop-blur-md p-2 overflow-y-auto">
+                            <div className="relative w-full max-w-[460px] bg-white rounded-[45px] border-[8px] md:border-[10px] border-[#ffcc33] flex flex-col items-center p-5 md:p-8 shadow-2xl animate-in zoom-in duration-300 my-auto">
+                                <div className="absolute top-4 left-6 opacity-10 text-7xl grayscale select-none">🗺️</div>
+                                <div className="text-center mb-4 md:mb-6 relative z-10">
+                                    <h1 className="text-[#f15a24] text-3xl md:text-4xl font-black uppercase tracking-tight mb-1">Hướng Dẫn Giải Mã</h1>
+                                    <div className="bg-[#ffe8ed] px-5 py-1 rounded-full inline-block">
+                                        <span className="text-[#ff4d6d] font-bold text-xs md:text-sm uppercase tracking-widest italic">Độ khó: Bậc thầy</span>
+                                    </div>
+                                </div>
+                                <div className="w-full bg-[#f8f9fa] rounded-[25px] border border-gray-100 p-4 md:p-6 mb-6 custom-scroll overflow-y-auto max-h-[50vh] relative z-10 shadow-inner">
+                                    <h2 className="text-[#5d4037] text-base md:text-lg font-bold text-center mb-5 flex items-center justify-center gap-2">📜 Quy Tắc Kho Báu:</h2>
+                                    <ul className="space-y-4 md:space-y-5">
+                                        <li className="flex items-start gap-3">
+                                            <span className="text-2xl flex-shrink-0">🎡</span>
+                                            <div>
+                                                <p className="text-xs md:text-sm font-black text-[#5e35b1]">Vòng Quay May Mắn:</p>
+                                                <p className="text-[10px] md:text-[11px] text-gray-500 font-medium leading-tight">Quay nón để định giá chữ cái. Tránh ô PHÁ SẢN làm mất sạch điểm quỹ.</p>
+                                            </div>
+                                        </li>
+                                        <li className="flex items-start gap-3 border-t border-gray-100 pt-3">
+                                            <span className="text-2xl flex-shrink-0">💡</span>
+                                            <div>
+                                                <p className="text-xs md:text-sm font-black text-[#1e88e5]">Gợi Ý Cổ Thư:</p>
+                                                <p className="text-[10px] md:text-[11px] text-gray-500 font-medium leading-tight">Đoán chữ để mở câu hỏi gợi ý. Mọi dấu thanh đều bị ẩn giấu.</p>
+                                            </div>
+                                        </li>
+                                        <li className="flex items-start gap-3 border-t border-gray-100 pt-3">
+                                            <span className="text-2xl flex-shrink-0">⌨️</span>
+                                            <div>
+                                                <p className="text-xs md:text-sm font-black text-[#757575]">Tự Giải Mật Mã:</p>
+                                                <p className="text-[10px] md:text-[11px] text-gray-500 font-medium leading-tight">Nhập đáp án không dấu vào các ô trống bên dưới để giải mã hoàn toàn.</p>
+                                            </div>
+                                        </li>
+                                        <li className="flex items-start gap-3 border-t border-gray-100 pt-3">
+                                            <span className="text-2xl flex-shrink-0">🏺</span>
+                                            <div>
+                                                <p className="text-xs md:text-sm font-black text-[#fbc02d]">Mốc Điểm Vượt Cấp:</p>
+                                                <p className="text-[10px] md:text-[11px] text-gray-500 font-medium leading-tight">Mỗi chương yêu cầu số điểm Quota tối thiểu để mở phong ấn bước tiếp.</p>
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <button onClick={() => setShowIntro(false)} className="relative w-full max-w-[320px] btn-3d-shadow mb-2">
+                                    <div className="bg-gradient-to-r from-[#f15a24] to-[#ff8c3a] text-white font-black text-lg py-4 rounded-2xl border-2 border-white shadow-lg flex items-center justify-center gap-3">CHẤP NHẬN THỬ THÁCH 🚀</div>
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* HEADER */}
+                    <div className="relative z-20 flex justify-between items-center px-4 md:px-6 py-4 bg-black/70 border-b border-white/10 backdrop-blur-md flex-shrink-0">
                         <div className="flex flex-col">
                             <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-tight">Tiền quỹ</p>
-                            <p className="text-2xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-600 drop-shadow-glow">
+                            <p className="text-2xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-600 drop-shadow-glow">
                                 {score.toLocaleString()}đ
                             </p>
                             <div className="mt-1 text-[8px] md:text-[9px] bg-blue-900/40 px-2 py-0.5 rounded border border-blue-500/30 w-fit">
@@ -416,10 +400,10 @@
                         <div className="flex flex-col items-center">
                             <p className="text-[9px] text-slate-400 font-bold uppercase mb-1">⚡ Quota</p>
                             <div className="flex items-center gap-2">
-                                <span className={`text-3xl md:text-4xl font-black ${spinsLeft <= 1 ? 'text-red-500 animate-pulse' : 'text-white'}`}>{spinsLeft}</span>
+                                <span className={`text-2xl md:text-3xl font-black ${spinsLeft <= 1 ? 'text-red-500 animate-pulse' : 'text-white'}`}>{spinsLeft}</span>
                                 <button 
                                     onClick={() => { if(score >= 800) { setScore(s => s - 800); setSpinsLeft(l => l + 1); } }}
-                                    className="bg-emerald-600 hover:bg-emerald-500 text-white text-[8px] md:text-[10px] font-bold px-2 py-1.5 rounded-lg border-b-4 border-emerald-900 active:scale-95 shadow-lg"
+                                    className="bg-emerald-600 hover:bg-emerald-500 text-white text-[8px] md:text-[10px] font-bold px-3 py-1.5 rounded-lg border-b-4 border-emerald-900 active:scale-95 shadow-lg whitespace-nowrap"
                                 >
                                     +1⚡
                                 </button>
@@ -432,18 +416,19 @@
                         </div>
                     </div>
 
-                    {/* Content */}
-                    <div className="relative z-20 flex-1 flex flex-col justify-center items-center p-4 gap-4 md:gap-8 overflow-y-auto">
-                        <div className="w-full text-center">
-                            <h3 className="text-[10px] md:text-[11px] text-indigo-400/60 font-black tracking-[0.4em] uppercase mb-2">DI SẢN CỔ THƯ</h3>
+                    {/* MAIN GAME AREA */}
+                    <div className="relative z-20 flex-1 flex flex-col justify-center items-center p-4 gap-8 overflow-y-auto custom-scroll">
+                        {/* Di sản cổ thư */}
+                        <div className="w-full text-center py-2">
+                            <h3 className="text-[10px] md:text-[11px] text-indigo-400/60 font-black tracking-[0.4em] uppercase mb-4">DI SẢN CỔ THƯ</h3>
                             <div className="flex flex-wrap justify-center gap-1.5 md:gap-2">
                                 {GAME_DATA[currentLevel].q.split(' ').map((word, wIdx) => (
-                                    <div key={wIdx} className="flex gap-1 mb-1">
+                                    <div key={wIdx} className="flex gap-1 mb-2 flex-shrink-0">
                                         {word.split('').map((char, cIdx) => {
                                             const baseChar = stripToneOnly(char);
                                             const isReveal = revealedLetters.has(baseChar) || !VIET_ALPHABET.includes(baseChar);
                                             return (
-                                                <div key={cIdx} className={`w-7 h-9 md:w-10 md:h-12 flex items-center justify-center font-bold text-base md:text-xl rounded-md border transition-all duration-500 ${isReveal ? 'bg-white text-indigo-900 border-indigo-200 rotate-y-0 shadow-light' : 'bg-slate-800/60 border-slate-700 text-transparent rotate-y-180'}`}>
+                                                <div key={cIdx} className={`w-7 h-9 md:w-10 md:h-12 flex-shrink-0 flex items-center justify-center font-bold text-base md:text-xl rounded-md border transition-all duration-500 ${isReveal ? 'bg-white text-indigo-900 border-indigo-200 rotate-y-0 shadow-light' : 'bg-slate-800/60 border-slate-700 text-transparent rotate-y-180'}`}>
                                                     {isReveal ? baseChar : ''}
                                                 </div>
                                             );
@@ -453,11 +438,12 @@
                             </div>
                         </div>
 
+                        {/* Mật mã truy tìm */}
                         <div className="w-full text-center py-4" id="answer-area">
                             <h3 className="text-[10px] md:text-[11px] text-yellow-500/60 font-black tracking-[0.4em] uppercase mb-4 text-pulse">MẬT MÃ TRUY TÌM (TỰ ĐIỀN)</h3>
                             <div className="flex flex-wrap justify-center gap-3 md:gap-4 mb-6">
                                 {GAME_DATA[currentLevel].a.split(' ').map((word, wIdx) => (
-                                    <div key={wIdx} className="flex gap-1.5 md:gap-2">
+                                    <div key={wIdx} className="flex gap-1.5 md:gap-2 flex-shrink-0">
                                         {word.split('').map((char, cIdx) => {
                                             const val = userGuessMap[`${wIdx}-${cIdx}`] || "";
                                             return (
@@ -476,7 +462,7 @@
                                                     onFocus={(e) => e.target.select()}
                                                     onKeyDown={(e) => handleKeyDown(wIdx, cIdx, e)}
                                                     onChange={(e) => handleInputChange(wIdx, cIdx, e.target.value)}
-                                                    className={`puzzle-input w-8 h-11 md:w-14 md:h-20 bg-black/40 border-b-4 border-slate-700 flex items-center justify-center font-black text-center uppercase focus:outline-none focus:border-yellow-500 transition-all ${val ? 'text-white border-indigo-500 shadow-neon' : 'text-slate-500'}`}
+                                                    className={`puzzle-input w-8 h-11 md:w-12 md:h-16 flex-shrink-0 bg-black/40 border-b-4 border-slate-700 flex items-center justify-center font-black text-center uppercase focus:outline-none focus:border-yellow-500 transition-all ${val ? 'text-white border-indigo-500 shadow-neon' : 'text-slate-500'}`}
                                                 />
                                             );
                                         })}
@@ -492,8 +478,8 @@
                         </div>
                     </div>
 
-                    {/* Controls */}
-                    <div className="relative z-20 bg-black/80 backdrop-blur-xl p-4 md:p-6 border-t border-white/10 flex flex-col md:flex-row items-center gap-4 md:gap-6">
+                    {/* CONTROLS AREA */}
+                    <div className="relative z-20 bg-black/80 backdrop-blur-xl p-4 md:p-6 border-t border-white/10 flex flex-col md:flex-row items-center gap-4 md:gap-6 flex-shrink-0">
                         <div className="flex items-center gap-6">
                             <div className="relative group cursor-pointer" onClick={spinWheel}>
                                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-5 h-7 bg-red-600 z-30 clip-path-pointer drop-shadow-md border border-red-400"></div>
@@ -523,13 +509,13 @@
                         </div>
                     </div>
 
-                    {/* Modals Section */}
+                    {/* MODALS PHỤ (Recharge, Success, Fail, Victory) */}
                     {showRecharge && (
                         <div className="fixed inset-0 z-[600] bg-black/90 flex items-center justify-center p-6 backdrop-blur-md">
                             <div className="bg-[#0f172a] p-8 md:p-10 rounded-[2rem] border-2 border-red-500 max-w-sm w-full text-center shadow-2xl">
                                 <div className="text-red-500 text-6xl mb-4 animate-pulse">⚡</div>
                                 <h2 className="text-xl md:text-2xl font-black mb-2 uppercase text-white">Nạp Năng Lượng</h2>
-                                <div className="bg-black/60 p-6 md:p-8 rounded-3xl mb-6">
+                                <div className="bg-black/60 p-6 md:p-8 rounded-3xl mb-6 text-center">
                                     <p className="text-xl md:text-2xl font-black mb-4 text-blue-400">{mathTask.q}</p>
                                     <input type="number" autoFocus onKeyDown={(e) => { if (e.key === 'Enter') { if (parseInt(e.target.value) === mathTask.a) { setSpinsLeft(3); setShowRecharge(false); } else { e.target.value = ""; } } }} className="w-full bg-slate-900 text-white p-3 rounded-xl text-center text-2xl font-black border-2 border-red-600/30" placeholder="?" />
                                 </div>
@@ -541,12 +527,12 @@
                         <div className="fixed inset-0 z-[600] bg-black/95 flex items-center justify-center p-6 backdrop-blur-lg text-center">
                             <div className="bg-[#0f172a] p-8 md:p-10 rounded-[3rem] border-4 border-emerald-500/30 max-w-sm w-full shadow-2xl">
                                 <div className="text-6xl md:text-7xl mb-6">🏆</div>
-                                <h2 className="text-2xl md:text-3xl font-black mb-2 text-white uppercase">THÀNH CÔNG</h2>
+                                <h2 className="text-2xl md:text-3xl font-black mb-2 text-white uppercase font-serif tracking-tighter">THÀNH CÔNG</h2>
                                 <p className="text-slate-400 mb-6 text-xs md:text-sm italic font-serif">"{GAME_DATA[currentLevel].desc}"</p>
                                 <div className="bg-black/40 p-4 md:p-5 rounded-2xl mb-8 border border-emerald-500/20">
                                     <p className="text-3xl md:text-4xl font-black text-emerald-400">{score.toLocaleString()}đ</p>
                                 </div>
-                                <button onClick={handleNextLevel} className="w-full bg-emerald-600 hover:bg-emerald-500 py-3 md:py-4 rounded-xl font-black text-lg">TIẾP THEO</button>
+                                <button onClick={handleNextLevel} className="w-full bg-emerald-600 hover:bg-emerald-500 py-3 md:py-4 rounded-xl font-black text-lg shadow-lg active:scale-95">TIẾP THEO</button>
                             </div>
                         </div>
                     )}
@@ -555,18 +541,18 @@
                         <div className="fixed inset-0 z-[600] bg-black/95 flex items-center justify-center p-6 text-center">
                             <div className="bg-slate-900 p-10 rounded-3xl border-4 border-red-600 max-w-sm w-full shadow-2xl">
                                 <div className="text-6xl md:text-7xl mb-6">🚫</div>
-                                <h2 className="text-xl md:text-2xl font-black mb-4 uppercase text-white">Chưa Đủ Điểm</h2>
-                                <p className="text-slate-400 text-xs md:text-sm mb-8 leading-relaxed">Bạn cần tối thiểu <span className="text-red-500 font-bold">{LEVEL_THRESHOLDS[currentLevel + 1].toLocaleString()}đ</span> để mở phong ấn. Hiện có: <span className="font-bold text-white">{score.toLocaleString()}đ</span>.</p>
-                                <button onClick={() => location.reload()} className="w-full bg-red-600 py-3 md:py-4 rounded-xl font-black text-white">BẮT ĐẦU LẠI</button>
+                                <h2 className="text-xl md:text-2xl font-black mb-4 uppercase text-white tracking-tighter">Chưa Đủ Điểm</h2>
+                                <p className="text-slate-400 text-xs md:text-sm mb-8 leading-relaxed italic">Bạn cần tối thiểu <span className="text-red-500 font-bold">{LEVEL_THRESHOLDS[currentLevel + 1].toLocaleString()}đ</span> để mở phong ấn. Hiện có: <span className="font-bold text-white">{score.toLocaleString()}đ</span>.</p>
+                                <button onClick={() => location.reload()} className="w-full bg-red-600 py-3 md:py-4 rounded-xl font-black text-white active:scale-95 shadow-lg">BẮT ĐẦU LẠI</button>
                             </div>
                         </div>
                     )}
 
                     {gameOver && (
-                        <div className="fixed inset-0 z-[700] bg-black flex flex-col items-center justify-center p-8 text-center">
+                        <div className="fixed inset-0 z-[700] bg-[#020617] flex flex-col items-center justify-center p-8 text-center">
                             <div className="text-8xl md:text-9xl mb-8 animate-pulse drop-shadow-glow">👑</div>
-                            <h1 className="text-4xl md:text-6xl font-black text-yellow-500 mb-4 uppercase italic">ĐẠI SƯ VĨNH HẰNG</h1>
-                            <p className="text-slate-300 mb-12 text-lg md:text-xl">Tổng di sản tích lũy: <span className="text-emerald-400 font-bold">{score.toLocaleString()}đ</span></p>
+                            <h1 className="text-4xl md:text-6xl font-black text-yellow-500 mb-4 uppercase italic tracking-tighter">ĐẠI SƯ VĨNH HẰNG</h1>
+                            <p className="text-slate-300 mb-12 text-lg md:text-xl font-serif">Tổng di sản tích lũy: <span className="text-emerald-400 font-bold">{score.toLocaleString()}đ</span></p>
                             <button onClick={() => location.reload()} className="bg-white text-black px-12 md:px-16 py-4 md:py-5 rounded-full font-black text-xl md:text-2xl shadow-xl hover:scale-105 active:scale-95 transition-all">TÁI SINH</button>
                         </div>
                     )}
