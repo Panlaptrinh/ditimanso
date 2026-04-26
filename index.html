@@ -3,13 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Truy tìm kho báu ca dao Việt Nam</title>
+    <title>Hành Trình Kho Báu Việt - PN 293</title>
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- React, ReactDOM, and Babel for standalone execution -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Firebase Libraries -->
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore-compat.js"></script>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;700&family=Oswald:wght@700&display=swap" rel="stylesheet">
     <style>
@@ -46,30 +50,21 @@
             animation: stars 200s linear infinite; opacity: 0.3;
         }
 
-        .puzzle-input {
-            font-size: 18px !important;
-            caret-color: #fbbf24;
-        }
-        @media (min-width: 768px) {
-            .puzzle-input {
-                font-size: 24px !important;
-            }
-        }
+        .puzzle-input { caret-color: #fbbf24; }
 
-        .custom-scroll::-webkit-scrollbar {
-            width: 5px;
-        }
-        .custom-scroll::-webkit-scrollbar-thumb {
-            background: #f15a24;
-            border-radius: 10px;
-        }
+        .custom-scroll::-webkit-scrollbar { width: 5px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #f15a24; border-radius: 10px; }
 
-        .btn-3d-shadow {
-            box-shadow: 0 6px 0 #c63017;
-        }
-        .btn-3d-shadow:active {
-            box-shadow: 0 2px 0 #c63017;
-            transform: translateY(4px);
+        .btn-3d-shadow { box-shadow: 0 6px 0 #c63017; }
+        .btn-3d-shadow:active { box-shadow: 0 2px 0 #c63017; transform: translateY(4px); }
+        
+        .theme-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .theme-card:hover { transform: translateY(-5px); border-color: #f15a24; background: rgba(241, 90, 36, 0.1); }
+        
+        .gift-glow { animation: gift-glow-anim 1.5s infinite alternate; }
+        @keyframes gift-glow-anim {
+            from { filter: drop-shadow(0 0 10px #fbbf24); }
+            to { filter: drop-shadow(0 0 30px #f15a24); }
         }
     </style>
 </head>
@@ -79,13 +74,20 @@
     <script type="text/babel">
         const { useState, useEffect, useRef, useCallback } = React;
 
-        const LEVEL_THRESHOLDS = [0, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500];
+        // Firebase Configuration
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "" };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'treasure-hunt-vn';
+
+        const LEVEL_THRESHOLDS = [0, 5000, 15000, 30000, 50000, 75000, 105000, 140000, 180000, 230000, 280000, 340000, 400000, 470000, 550000, 640000, 740000, 850000, 970000, 1100000];
 
         const WHEEL_SEGMENTS = [
             { label: "100", color: "#1e1b4b", value: 100 },
             { label: "300", color: "#312e81", value: 300 },
             { label: "500", color: "#3730a3", value: 500 },
-            { label: "PHÁ SẢN", color: "#7f1d1d", value: -1 },
+            { label: "-20%", color: "#7f1d1d", value: -0.2 },
             { label: "+1 LƯỢT", color: "#064e3b", value: -3 },
             { label: "800", color: "#4338ca", value: 800 },
             { label: "MAY MẮN", color: "#92400e", value: 2000 },
@@ -96,472 +98,515 @@
 
         const VIET_ALPHABET = "AĂÂBCDĐEÊGHIKLMNOÔƠPQRSTUƯVXY".split("");
 
-        const GAME_DATA = [
-            { q: "Cần lao vi bản, bất năng vi sư", a: "CẦN CÙ", desc: "Chăm chỉ là gốc rễ của sự thành công." },
-            { q: "Dục tốc bất đạt", a: "VỘI VÀNG", desc: "Làm việc gì cũng cần kiên nhẫn, không nên quá nóng vội." },
-            { q: "Bán tự vi sư, nhất tự vi sư", a: "DẠY DỖ", desc: "Tôn sư trọng đạo, một chữ cũng là thầy." },
-            { q: "Tiên học lễ, hậu học văn", a: "LỄ NGHĨA", desc: "Học làm người trước khi học kiến thức." },
-            { q: "Uống nước nhớ nguồn", a: "BIẾT ƠN", desc: "Lòng biết ơn đối với những người đi trước." },
-            { q: "Gần bùn mà chẳng hôi tanh mùi bùn", a: "SEN", desc: "Giữ vững phẩm giá trong môi trường xấu." },
-            { q: "Trúc xinh trúc mọc đầu đình", a: "TRÚC", desc: "Hình tượng cây trúc quân tử trong văn hóa." },
-            { q: "Một con ngựa đau cả tàu bỏ cỏ", a: "ĐOÀN KẾT", desc: "Sự thấu cảm và tinh thần tập thể." },
-            { q: "Thương người như thể thương thân", a: "NHÂN ÁI", desc: "Lòng nhân từ giữa người với người." },
-            { q: "Có công mài sắt có ngày nên kim", a: "KIÊN TRÌ", desc: "Sự kiên trì sẽ dẫn đến thành quả vĩ đại." },
-            { q: "Game này ai là tác giả?", a: "PN", desc: "PN-293 là người phát hành game này và các tựa game vui khác." },
+        const THEMES = [
+            { id: 'cadao', name: 'Ca Dao Tục Ngữ', icon: '📜' },
+            { id: 'amthuc', name: 'Ẩm Thực Vùng Miền', icon: '🍜' },
+            { id: 'tinhthanh', name: 'Địa Danh Tỉnh Thành', icon: '🗺️' }
         ];
 
+        const GAME_DATA = {
+            cadao: [
+                { q: "Bầu ơi thương lấy bí cùng, tuy rằng khác giống nhưng chung một giàn", a: "BẦU BÍ", hint: "Tình đoàn kết, tương thân tương ái giữa con người.", desc: "Đùm bọc lẫn nhau trong hoạn nạn." },
+                { q: "Công cha như núi Thái Sơn, nghĩa mẹ như nước trong nguồn chảy ra", a: "CÔNG CHA", hint: "Nói về công lao to lớn của bậc sinh thành.", desc: "Hiếu thảo với cha mẹ." },
+                { q: "Ăn quả nhớ kẻ trồng cây, ăn khoai nhớ kẻ cho dây mà trồng", a: "TRÂN TRỌNG", hint: "Lòng biết ơn đối với những người đã giúp đỡ mình.", desc: "Đạo lý uống nước nhớ nguồn." },
+                { q: "Một cây làm chẳng nên non, ba cây chụm lại nên hòn núi cao", a: "ĐOÀN KẾT", hint: "Sức mạnh của sự đồng lòng và tập thể.", desc: "Đoàn kết là sức mạnh." },
+                { q: "Đi một ngày đàng học một sàng khôn", a: "HỌC HỎI", hint: "Khuyên con người nên đi đây đi đó để mở mang kiến thức.", desc: "Trải nghiệm thực tế quý báu." },
+                { q: "Nhiễu điều phủ lấy giá gương, người trong một nước phải thương nhau cùng", a: "NHIỄU ĐIỀU", hint: "Sự đoàn kết, yêu thương của đồng bào.", desc: "Tình dân tộc nghĩa đồng bào." },
+                { q: "Chuồn chuồn bay thấp thì mưa, bay cao thì nắng, bay vừa thì râm", a: "CHUỒN CHUỒN", hint: "Kinh nghiệm dự báo thời tiết dựa vào loài vật.", desc: "Tri thức dân gian về thiên nhiên." },
+                { q: "Cày đồng đang buổi ban trưa, mồ hôi thánh thót như mưa ruộng cày", a: "VẤT VẢ", hint: "Sự gian khổ của người nông dân trên đồng ruộng.", desc: "Quý trọng hạt gạo làm ra." },
+                { q: "Không thầy đố mày làm nên", a: "THẦY CÔ", hint: "Nhấn mạnh vai trò quan trọng của người dạy dỗ.", desc: "Tôn sư trọng đạo." },
+                { q: "Trong đầm gì đẹp bằng sen, lá xanh bông trắng lại chen nhị vàng", a: "HOA SEN", hint: "Vẻ đẹp thuần khiết của loài hoa quốc hồn quốc túy.", desc: "Sống trong sạch, liêm khiết." },
+                { q: "Lá lành đùm lá rách, lá rách ít đùm lá rách nhiều", a: "SẺ CHIA", hint: "Lòng nhân hậu, giúp đỡ người khó khăn hơn mình.", desc: "Lá lành đùm lá rách." },
+                { q: "Anh em như thể tay chân, rách lành đùm bọc, dở hay đỡ đần", a: "ANH EM", hint: "Tình cảm gắn bó mật thiết giữa các thành viên gia đình.", desc: "Tình anh em máu mủ." },
+                { q: "Cá không ăn muối cá ươn, con cãi cha mẹ trăm đường con hư", a: "LỜI DẠY", hint: "Sự cần thiết của việc nghe theo lời khuyên bảo.", desc: "Hiếu thảo và vâng lời." },
+                { q: "Tấc đất tấc vàng", a: "QUÝ GIÁ", hint: "Nói về giá trị to lớn của đất đai sản xuất.", desc: "Đất đai là tài sản quý báu." },
+                { q: "Trâu ơi ta bảo trâu này, trâu ra ngoài ruộng trâu cày với ta", a: "CON TRÂU", hint: "Người bạn thân thiết của nhà nông Việt Nam.", desc: "Con trâu là đầu cơ nghiệp." },
+                { q: "Gần mực thì đen, gần đèn thì rạng", a: "MÔI TRƯỜNG", hint: "Sự ảnh hưởng của môi trường xung quanh đến con người.", desc: "Chọn bạn mà chơi." },
+                { q: "Chị ngã em nâng", a: "CHỊ EM", hint: "Sự giúp đỡ, đùm bọc lẫn nhau giữa anh chị em.", desc: "Tình thân gia đình." },
+                { q: "Học thầy không tày học bạn", a: "GIAO LƯU", hint: "Khuyên con người nên học hỏi từ bạn bè đồng trang lứa.", desc: "Học đi đôi với hành." },
+                { q: "Thương người như thể thương thân", a: "NHÂN ÁI", hint: "Lòng trắc ẩn, yêu thương người khác như chính mình.", desc: "Tấm lòng nhân hậu." },
+                { q: "Có công mài sắt có ngày nên kim", a: "KIÊN TRÌ", hint: "Sự bền bỉ, nhẫn nại sẽ dẫn đến thành công.", desc: "Lòng kiên trì vượt khó." }
+            ],
+            amthuc: [
+                { q: "Món ăn quốc hồn quốc túy của Việt Nam, nước dùng thanh ngọt?", a: "PHỞ", hint: "Thường ăn kèm bò hoặc gà.", desc: "Tinh túy ẩm thực Việt." },
+                { q: "Đặc sản của Hội An, sợi mì vàng, ăn với tôm thịt?", a: "CAO LẦU", hint: "Nước dùng lấy từ giếng cổ Bá Lễ.", desc: "Món ngon phố cổ." },
+                { q: "Món bánh có vỏ mỏng, nhân tôm thịt, đặc sản Nam Bộ?", a: "BÁNH XÈO", hint: "Ăn kèm rất nhiều rau sống.", desc: "Giòn rụm hương vị miền Tây." },
+                { q: "Bún chả là đặc sản nổi tiếng của thành phố nào?", a: "HÀ NỘI", hint: "Cố Thủ tướng Obama từng ăn.", desc: "Hương vị thủ đô." },
+                { q: "Món bún mang hương vị mắm ruốc, chân giò?", a: "BÚN BÒ HUẾ", hint: "Cố đô của Việt Nam.", desc: "Đậm đà phong vị miền Trung." }
+            ],
+            tinhthanh: [
+                { q: "Thành phố ngàn hoa, khí hậu ôn hòa?", a: "DA LAT", hint: "Tỉnh Lâm Đồng.", desc: "Thành phố mộng mơ." },
+                { q: "Hòn ngọc Viễn Đông?", a: "SAI GON", hint: "TP. Hồ Chí Minh.", desc: "Thành phố năng động." },
+                { q: "Thành phố trực thuộc TW nào có cầu Rồng?", a: "DA NANG", hint: "Thủ phủ miền Trung.", desc: "Thành phố đáng sống." },
+                { q: "Tỉnh nào có vịnh Hạ Long?", a: "QUANG NINH", hint: "Kỳ quan thiên nhiên thế giới.", desc: "Đất mỏ kỳ quan." },
+                { q: "Mũi Cà Mau thuộc tỉnh nào?", a: "CA MAU", hint: "Cực Nam Tổ quốc.", desc: "Đất mũi linh thiêng." }
+            ]
+        };
+
         function App() {
-            const [showIntro, setShowIntro] = useState(true);
+            const [gameState, setGameState] = useState('INTRO'); // INTRO, LOGIN, CODE, THEME_SELECT, PLAY
+            const [userName, setUserName] = useState('');
+            const [selectedTheme, setSelectedTheme] = useState('cadao');
             const [currentLevel, setCurrentLevel] = useState(0);
             const [score, setScore] = useState(0);
             const [spinsLeft, setSpinsLeft] = useState(3);
             const [revealedLetters, setRevealedLetters] = useState(new Set());
             const [userGuessMap, setUserGuessMap] = useState({});
-            const [statusMsg, setStatusMsg] = useState("Quay nón để mở gợi ý!");
-            const [currentWheelValue, setCurrentWheelValue] = useState(0);
-            const [canGuess, setCanGuess] = useState(false);
+            const [statusMsg, setStatusMsg] = useState("Chào mừng nhà giải mã!");
+            const [currentWheelValue, setCurrentWheelValue] = useState(100); 
             const [rotation, setRotation] = useState(0);
             const [isSpinning, setIsSpinning] = useState(false);
             const [showRecharge, setShowRecharge] = useState(false);
-            const [mathTask, setMathTask] = useState({ q: "", a: 0 });
-            const [showSuccessModal, setShowSuccessModal] = useState(false);
+            const [showSuccess, setShowSuccess] = useState(false);
+            const [showFail, setShowFail] = useState(false);
+            const [showHint, setShowHint] = useState(false);
             const [showFailThresholdModal, setShowFailThresholdModal] = useState(false);
+            const [wheelResult, setWheelResult] = useState("");
+            const [mathTask, setMathTask] = useState({ q: "", a: 0 });
             const [gameOver, setGameOver] = useState(false);
-            const [wheelResultLabel, setWheelResultLabel] = useState("");
+            const [user, setUser] = useState(null);
+            const [giftCodeInput, setGiftCodeInput] = useState("");
+            const [codeError, setCodeError] = useState(false);
 
-            const wheelCanvasRef = useRef(null);
+            const wheelRef = useRef(null);
 
-            const stripToneOnly = (str) => {
-                if (!str) return "";
-                return str.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").normalize("NFC");
-            };
-
-            const drawWheel = useCallback((canvas, size) => {
-                if (!canvas) return;
-                const ctx = canvas.getContext('2d');
-                const center = size / 2;
-                const radius = center - 8;
-                const slice = (Math.PI * 2) / WHEEL_SEGMENTS.length;
-
-                ctx.clearRect(0, 0, size, size);
-                WHEEL_SEGMENTS.forEach((seg, i) => {
-                    const angle = i * slice;
-                    ctx.beginPath();
-                    ctx.fillStyle = seg.color;
-                    ctx.moveTo(center, center);
-                    ctx.arc(center, center, radius, angle, angle + slice);
-                    ctx.fill();
-                    ctx.strokeStyle = "rgba(255,255,255,0.2)";
-                    ctx.lineWidth = 1;
-                    ctx.stroke();
-
-                    ctx.save();
-                    ctx.translate(center, center);
-                    ctx.rotate(angle + slice / 2);
-                    ctx.textAlign = "right";
-                    ctx.fillStyle = "white";
-                    ctx.font = `bold ${size * 0.05}px Arial`;
-                    ctx.fillText(seg.label, radius - 10, 5);
-                    ctx.restore();
-                });
-
-                ctx.beginPath();
-                ctx.arc(center, center, radius, 0, Math.PI * 2);
-                ctx.strokeStyle = "#fbbf24";
-                ctx.lineWidth = 4;
-                ctx.stroke();
-
-                ctx.beginPath();
-                ctx.arc(center, center, 10, 0, Math.PI * 2);
-                ctx.fillStyle = "#fff";
-                ctx.fill();
+            useEffect(() => {
+                const initAuth = async () => {
+                    try { await auth.signInAnonymously(); } catch (e) {}
+                };
+                initAuth();
+                const unsub = auth.onAuthStateChanged(u => setUser(u));
+                return () => unsub();
             }, []);
 
-            useEffect(() => {
-                if (!showIntro && wheelCanvasRef.current) {
-                    drawWheel(wheelCanvasRef.current, 250);
-                }
-            }, [drawWheel, showIntro]);
+            const stripTone = (str) => {
+                if (!str) return "";
+                return str.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/Đ/g, "D").normalize("NFC");
+            };
+
+            const drawWheel = (canvas) => {
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                const slice = (Math.PI * 2) / WHEEL_SEGMENTS.length;
+                ctx.clearRect(0,0,250,250);
+                WHEEL_SEGMENTS.forEach((seg, i) => {
+                    const angle = i * slice;
+                    ctx.beginPath(); ctx.fillStyle = seg.color; ctx.moveTo(125, 125); ctx.arc(125, 125, 120, angle, angle + slice); ctx.fill();
+                    ctx.save(); ctx.translate(125, 125); ctx.rotate(angle + slice/2); ctx.textAlign = "right"; ctx.fillStyle = "white"; ctx.font = "bold 10px Arial"; ctx.fillText(seg.label, 110, 5); ctx.restore();
+                });
+                ctx.beginPath(); ctx.arc(125, 125, 10, 0, Math.PI * 2); ctx.fillStyle = "#fff"; ctx.fill();
+            };
 
             useEffect(() => {
-                setUserGuessMap({});
-                setRevealedLetters(new Set());
-                setCanGuess(false);
-                setWheelResultLabel("");
-            }, [currentLevel]);
-
-            const spinWheel = () => {
-                if (isSpinning || canGuess) return;
-                if (spinsLeft <= 0) {
-                    const a = Math.floor(Math.random() * 15) + 5;
-                    const b = Math.floor(Math.random() * 10) + 2;
-                    const c = Math.floor(Math.random() * 20) + 5;
-                    setMathTask({ q: `(${a} x ${b}) - ${c} = ?`, a: (a * b) - c });
-                    setShowRecharge(true);
-                    return;
+                if (gameState === 'PLAY') {
+                    setTimeout(() => drawWheel(wheelRef.current), 100);
                 }
+            }, [gameState]);
 
-                setSpinsLeft(prev => prev - 1);
+            const handleSpin = () => {
+                if (isSpinning || spinsLeft <= 0) return;
+                setSpinsLeft(s => s - 1);
                 setIsSpinning(true);
-                setWheelResultLabel("");
-                const extraRotation = 1440 + Math.random() * 360; 
-                const newRotation = rotation + extraRotation;
+                setWheelResult("");
+                const extra = 1440 + Math.random() * 360;
+                const newRotation = rotation + extra;
                 setRotation(newRotation);
-
                 setTimeout(() => {
                     setIsSpinning(false);
-                    const actualDeg = newRotation % 360;
-                    const sliceSize = 360 / WHEEL_SEGMENTS.length;
-                    const index = Math.floor(((360 - (actualDeg % 360) + 270) % 360) / sliceSize);
-                    const result = WHEEL_SEGMENTS[index];
-                    setWheelResultLabel(result.label);
-                    handleWheelResult(result);
+                    const deg = newRotation % 360;
+                    const idx = Math.floor(((360 - (deg % 360) + 270) % 360) / (360 / WHEEL_SEGMENTS.length));
+                    const result = WHEEL_SEGMENTS[idx];
+                    setWheelResult(result.label);
+                    
+                    if (typeof result.value === 'number' && result.value < 0 && result.value > -1) {
+                        setScore(s => Math.floor(s * (1 + result.value)));
+                        setStatusMsg("Rủi ro! " + result.label);
+                    } else if (result.value === -2) {
+                        setStatusMsg("Mất lượt quay!");
+                    } else if (result.value === -3) {
+                        setSpinsLeft(s => s + 1);
+                        setStatusMsg("May mắn! +1 lượt quay.");
+                    } else {
+                        setCurrentWheelValue(result.value);
+                        setStatusMsg(`Nhân giá trị thưởng: x${result.label}đ!`);
+                    }
                 }, 4000);
             };
 
-            const handleWheelResult = (result) => {
-                if (result.value === -1) {
-                    setScore(500);
-                    setStatusMsg("Xém Phá SẢN! An ủi 500 nghen.");
-                } else if (result.value === -2) {
-                    setStatusMsg("MẤT LƯỢT!");
-                } else if (result.value === -3) {
-                    setSpinsLeft(prev => prev + 1);
-                    setStatusMsg("+1 LƯỢT QUAY!");
-                } else {
-                    setCurrentWheelValue(result.value);
-                    setStatusMsg(`${result.label} ĐIỂM! Hãy đoán ký tự câu hỏi.`);
-                    setCanGuess(true);
-                }
-            };
-
-            const handleLetterGuess = (char) => {
-                if (!canGuess) return;
-                const data = GAME_DATA[currentLevel];
-                const targetChar = char.toUpperCase();
-                const questionStr = stripToneOnly(data.q);
+            const guessLetter = (char) => {
+                if (isSpinning) return;
+                
+                const data = GAME_DATA[selectedTheme][currentLevel];
+                const cleanChar = stripTone(char);
+                const questionBase = stripTone(data.q);
                 let count = 0;
-                for (let i = 0; i < questionStr.length; i++) {
-                    if (questionStr[i] === targetChar) count++;
-                }
+                for (let c of questionBase) if (c === cleanChar) count++;
 
                 if (count > 0) {
-                    const bonus = count * currentWheelValue;
-                    setScore(prev => prev + bonus);
-                    const newRevealed = new Set(revealedLetters);
-                    newRevealed.add(targetChar);
-                    setRevealedLetters(newRevealed);
-                    setStatusMsg(`Chính xác! Có ${count} ký tự ${char}.`);
+                    setScore(s => s + (count * currentWheelValue));
+                    setRevealedLetters(new Set([...revealedLetters, cleanChar]));
+                    setStatusMsg(`Chính xác! Có ${count} chữ ${char}.`);
                 } else {
-                    setScore(prev => Math.max(0, prev - 200));
-                    setStatusMsg(`Tiếc quá! Không có ký tự ${char}.`);
-                }
-                setCanGuess(false);
-                setWheelResultLabel("");
-            };
-
-            const handleInputChange = (wordIdx, cIdx, val) => {
-                const key = `${wordIdx}-${cIdx}`;
-                const upperVal = stripToneOnly(val.slice(-1)); 
-                setUserGuessMap(prev => ({ ...prev, [key]: upperVal }));
-
-                if (upperVal && cIdx < GAME_DATA[currentLevel].a.split(' ')[wordIdx].length - 1) {
-                    const nextInput = document.getElementById(`input-${wordIdx}-${cIdx + 1}`);
-                    if (nextInput) nextInput.focus();
-                } else if (upperVal && wordIdx < GAME_DATA[currentLevel].a.split(' ').length - 1) {
-                    const nextWordFirstInput = document.getElementById(`input-${wordIdx + 1}-0`);
-                    if (nextWordFirstInput) nextWordFirstInput.focus();
+                    setScore(s => Math.max(0, s - 100)); 
+                    setStatusMsg(`Tiếc quá! Không có chữ ${char}. (-100đ)`);
                 }
             };
 
-            const handleKeyDown = (wordIdx, cIdx, e) => {
-                const key = `${wordIdx}-${cIdx}`;
-                if (e.key === 'Backspace' && !userGuessMap[key]) {
-                    if (cIdx > 0) {
-                        const prevInput = document.getElementById(`input-${wordIdx}-${cIdx - 1}`);
-                        if (prevInput) prevInput.focus();
-                    } else if (wordIdx > 0) {
-                        const prevWord = GAME_DATA[currentLevel].a.split(' ')[wordIdx - 1];
-                        const lastCharIdxOfPrevWord = prevWord.length - 1;
-                        const prevInput = document.getElementById(`input-${wordIdx - 1}-${lastCharIdxOfPrevWord}`);
-                        if (prevInput) prevInput.focus();
-                    }
+            const applyCode = () => {
+                if (giftCodeInput.trim().toUpperCase() === "PN2209") {
+                    setScore(2209);
+                    setGameState('THEME_SELECT');
+                } else {
+                    setCodeError(true);
+                    setTimeout(() => setCodeError(false), 500);
                 }
+            };
+
+            const saveProgress = async (newScore, newLevel) => {
+                if (!user || !userName) return;
+                try {
+                    await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('saves').doc(userName).set({
+                        userName, score: newScore, level: newLevel, theme: selectedTheme, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                } catch (e) {}
             };
 
             const checkFinalAnswer = () => {
-                const data = GAME_DATA[currentLevel];
+                const data = GAME_DATA[selectedTheme][currentLevel];
                 const words = data.a.split(' ');
-                let isAllCorrect = true;
+                let correct = true;
+                words.forEach((w, wIdx) => {
+                    w.split('').forEach((c, cIdx) => {
+                        if ((userGuessMap[`${wIdx}-${cIdx}`] || "").toUpperCase() !== stripTone(c)) correct = false;
+                    });
+                });
 
-                for (let w = 0; w < words.length; w++) {
-                    const chars = words[w].split('');
-                    for (let c = 0; c < chars.length; c++) {
-                        const userInput = userGuessMap[`${w}-${c}`] || "";
-                        if (userInput !== stripToneOnly(chars[c])) {
-                            isAllCorrect = false;
-                            break;
-                        }
-                    }
-                    if (!isAllCorrect) break;
-                }
-
-                if (isAllCorrect) {
-                    setScore(prev => prev + 10000);
-                    setStatusMsg("CHÍNH XÁC! Kho báu đã mở.");
-                    setTimeout(() => setShowSuccessModal(true), 800);
+                if (correct) {
+                    setScore(s => s + 1000); 
+                    setShowSuccess(true);
                 } else {
-                    setScore(prev => Math.max(0, prev - 1000));
-                    setStatusMsg("Mật mã chưa khớp!");
-                    const container = document.getElementById('answer-area');
-                    if (container) {
-                        container.classList.add('shake');
-                        setTimeout(() => container.classList.remove('shake'), 500);
-                    }
+                    setScore(s => Math.max(0, s - 200));
+                    setShowFail(true);
                 }
             };
 
-            const handleNextLevel = () => {
+            const handleNextLevel = async () => {
                 const nextIdx = currentLevel + 1;
-                if (nextIdx >= GAME_DATA.length) { setGameOver(true); return; }
-                if (score < LEVEL_THRESHOLDS[nextIdx]) setShowFailThresholdModal(true);
-                else { setShowSuccessModal(false); setCurrentLevel(nextIdx); }
+                if (nextIdx >= GAME_DATA[selectedTheme].length) { setGameOver(true); return; }
+                if (score < LEVEL_THRESHOLDS[nextIdx]) {
+                    setShowFailThresholdModal(true);
+                } else {
+                    if (nextIdx % 5 === 0) await saveProgress(score, nextIdx);
+                    setCurrentLevel(nextIdx);
+                    setUserGuessMap({});
+                    setRevealedLetters(new Set());
+                    setStatusMsg("Vượt chương thành công!");
+                }
             };
+
+            if (gameState === 'INTRO') {
+                return (
+                    <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/60 backdrop-blur-md p-2 overflow-y-auto">
+                        <div className="relative w-full max-w-[460px] bg-white rounded-[45px] border-[10px] border-[#ffcc33] flex flex-col items-center p-5 md:p-8 shadow-2xl animate-in zoom-in duration-300 my-auto">
+                            <div className="absolute top-4 left-6 opacity-10 text-7xl grayscale select-none">🗺️</div>
+                            <div className="text-center mb-6 relative z-10">
+                                <h1 className="text-[#f15a24] text-4xl md:text-5xl font-black uppercase tracking-tight mb-1">Hành Trình Kho Báu Việt</h1>
+                                <div className="bg-[#ffe8ed] px-5 py-1 rounded-full inline-block">
+                                    <span className="text-[#ff4d6d] font-bold text-xs md:text-sm uppercase tracking-widest italic">Độ khó: Bậc thầy</span>
+                                </div>
+                            </div>
+                            <div className="w-full bg-[#f8f9fa] rounded-[25px] border border-gray-100 p-4 md:p-6 mb-6 custom-scroll overflow-y-auto max-h-[45vh] relative z-10 shadow-inner">
+                                <h2 className="text-[#5d4037] text-base md:text-lg font-bold text-center mb-5 flex items-center justify-center gap-2">📜 Quy Tắc Kho Báu:</h2>
+                                <ul className="space-y-4 md:space-y-5">
+                                    <li className="flex items-start gap-3">
+                                        <span className="text-2xl flex-shrink-0">🎡</span>
+                                        <div>
+                                            <p className="text-xs md:text-sm font-black text-[#5e35b1]">Vòng Quay May Mắn:</p>
+                                            <p className="text-[10px] md:text-[11px] text-gray-500 font-medium leading-tight">Quay nón để định giá chữ cái. Tránh ô -20% hoặc MẤT LƯỢT.</p>
+                                        </div>
+                                    </li>
+                                    <li className="flex items-start gap-3 border-t border-gray-100 pt-3">
+                                        <span className="text-2xl flex-shrink-0">💡</span>
+                                        <div>
+                                            <p className="text-xs md:text-sm font-black text-[#1e88e5]">Mở Chữ Tự Do:</p>
+                                            <p className="text-[10px] md:text-[11px] text-gray-500 font-medium leading-tight">Chỉ cần có điểm, bạn có thể đoán chữ gợi ý ngay. Đoán sai trừ 100đ.</p>
+                                        </div>
+                                    </li>
+                                    <li className="flex items-start gap-3 border-t border-gray-100 pt-3">
+                                        <span className="text-2xl flex-shrink-0">⌨️</span>
+                                        <div>
+                                            <p className="text-xs md:text-sm font-black text-[#757575]">Tự Giải Mật Mã:</p>
+                                            <p className="text-[10px] md:text-[11px] text-gray-500 font-medium leading-tight">Phần dưới là mật mã rỗng. Tự gõ đáp án (không dấu) để thắng màn.</p>
+                                        </div>
+                                    </li>
+                                    <li className="flex items-start gap-3 border-t border-gray-100 pt-3">
+                                        <span className="text-2xl flex-shrink-0">🏺</span>
+                                        <div>
+                                            <p className="text-xs md:text-sm font-black text-[#fbc02d]">Điểm Quota:</p>
+                                            <p className="text-[10px] md:text-[11px] text-gray-500 font-medium leading-tight">Mỗi chương yêu cầu số điểm Quota tối thiểu để mở phong ấn bước tiếp.</p>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                            <button onClick={() => setGameState('LOGIN')} className="relative w-full max-w-[320px] btn-3d-shadow mb-2">
+                                <div className="bg-gradient-to-r from-[#f15a24] to-[#ff8c3a] text-white font-black text-lg py-4 rounded-2xl border-2 border-white shadow-lg flex items-center justify-center gap-3 uppercase">TIẾP TỤC ➔</div>
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (gameState === 'LOGIN') {
+                return (
+                    <div className="fixed inset-0 flex items-center justify-center p-6 bg-[#020617] z-[600]">
+                        <div className="bg-white rounded-[40px] border-[10px] border-[#ffcc33] p-8 w-full max-w-md shadow-2xl text-center animate-in zoom-in duration-300">
+                            <h1 className="text-[#f15a24] text-4xl font-black mb-6 uppercase tracking-tighter">DANH TÁNH</h1>
+                            <p className="text-gray-500 mb-8 font-bold italic">Nhập tên để lưu giữ kho báu của bạn</p>
+                            <input 
+                                value={userName} 
+                                onChange={e => setUserName(e.target.value.toUpperCase())}
+                                className="w-full bg-gray-100 p-4 rounded-2xl text-center text-xl font-black mb-8 border-2 border-transparent focus:border-[#f15a24] focus:outline-none uppercase"
+                                placeholder="TÊN CỦA BẠN..."
+                            />
+                            <button onClick={() => { if(userName) setGameState('CODE'); }} className="w-full bg-gradient-to-r from-[#f15a24] to-[#ff8c3a] text-white py-4 rounded-2xl font-black text-xl btn-3d-shadow uppercase">XÁC NHẬN 🚀</button>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (gameState === 'CODE') {
+                return (
+                    <div className="fixed inset-0 flex items-center justify-center p-6 bg-[#020617] z-[700]">
+                        <div className={`bg-white rounded-[40px] border-[10px] border-[#fbbf24] p-8 w-full max-w-md shadow-2xl text-center transition-transform ${codeError ? 'animate-shake' : 'animate-in zoom-in'}`}>
+                            <div className="text-6xl mb-4 gift-glow">🎁</div>
+                            <h2 className="text-2xl font-black text-[#f15a24] uppercase mb-4">PN TẶNG QUÀ</h2>
+                            <p className="text-gray-600 mb-6 font-bold leading-tight">Nhập mã Gift Code từ nhà phát hành PN để nhận <span className="text-emerald-600">2,209đ</span> khởi nghiệp!</p>
+                            <div className="bg-orange-50 p-2 rounded-lg mb-6 border border-orange-200">
+                                <p className="text-[10px] text-orange-400 font-bold uppercase text-center">Mã của bạn là: PN2209</p>
+                            </div>
+                            <input 
+                                value={giftCodeInput} 
+                                onChange={e => setGiftCodeInput(e.target.value.toUpperCase())}
+                                className="w-full bg-gray-100 p-4 rounded-xl text-center text-xl font-black mb-6 border-2 border-transparent focus:border-[#fbbf24] focus:outline-none"
+                                placeholder="NHẬP CODE..."
+                            />
+                            <div className="flex gap-3">
+                                <button onClick={() => setGameState('THEME_SELECT')} className="flex-1 bg-gray-200 text-gray-500 py-3 rounded-xl font-black uppercase text-sm">BỎ QUA</button>
+                                <button onClick={applyCode} className="flex-2 bg-[#fbbf24] text-black py-3 px-6 rounded-xl font-black uppercase shadow-lg">NHẬN 2209đ</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (gameState === 'THEME_SELECT') {
+                return (
+                    <div className="fixed inset-0 flex items-center justify-center p-6 bg-[#020617] z-[500]">
+                        <div className="w-full max-w-2xl bg-black/60 backdrop-blur-xl border border-white/10 rounded-[3rem] p-8 text-center animate-in fade-in duration-500">
+                            <h2 className="text-white text-3xl font-black mb-2 uppercase italic tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-red-500">Chọn Chủ Đề</h2>
+                            <p className="text-white/40 text-sm mb-10">Chào {userName}, hãy chọn hành trình của bạn</p>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                                {THEMES.map(t => (
+                                    <div key={t.id} onClick={() => { setSelectedTheme(t.id); setGameState('PLAY'); }} className="theme-card cursor-pointer bg-white/5 border border-white/10 p-6 rounded-[2rem] flex flex-col items-center hover:bg-white/10">
+                                        <span className="text-5xl mb-4">{t.icon}</span>
+                                        <h3 className="text-white font-black text-sm uppercase">{t.name}</h3>
+                                    </div>
+                                ))}
+                            </div>
+                            <button onClick={() => setGameState('LOGIN')} className="text-white/30 hover:text-white uppercase text-xs font-bold underline">ĐỔI TÀI KHOẢN</button>
+                        </div>
+                    </div>
+                );
+            }
 
             return (
                 <div className="relative w-full h-screen flex flex-col z-10 overflow-hidden bg-[#020617]">
-                    <div className="stars-container">
-                        <div className="stars"></div>
-                        <div className="twinkling"></div>
-                    </div>
-
-                    {/* MODAL HƯỚNG DẪN */}
-                    {showIntro && (
-                        <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/60 backdrop-blur-md p-2 overflow-y-auto">
-                            <div className="relative w-full max-w-[460px] bg-white rounded-[45px] border-[8px] md:border-[10px] border-[#ffcc33] flex flex-col items-center p-5 md:p-8 shadow-2xl animate-in zoom-in duration-300 my-auto">
-                                <div className="absolute top-4 left-6 opacity-10 text-7xl grayscale select-none">🗺️</div>
-                                <div className="text-center mb-4 md:mb-6 relative z-10">
-                                    <h1 className="text-[#f15a24] text-3xl md:text-4xl font-black uppercase tracking-tight mb-1">Hướng Dẫn Giải Mã</h1>
-                                    <div className="bg-[#ffe8ed] px-5 py-1 rounded-full inline-block">
-                                        <span className="text-[#ff4d6d] font-bold text-xs md:text-sm uppercase tracking-widest italic">Độ khó: Bậc thầy</span>
-                                    </div>
-                                </div>
-                                <div className="w-full bg-[#f8f9fa] rounded-[25px] border border-gray-100 p-4 md:p-6 mb-6 custom-scroll overflow-y-auto max-h-[50vh] relative z-10 shadow-inner">
-                                    <h2 className="text-[#5d4037] text-base md:text-lg font-bold text-center mb-5 flex items-center justify-center gap-2">📜 Quy Tắc Kho Báu:</h2>
-                                    <ul className="space-y-4 md:space-y-5">
-                                        <li className="flex items-start gap-3">
-                                            <span className="text-2xl flex-shrink-0">🎡</span>
-                                            <div>
-                                                <p className="text-xs md:text-sm font-black text-[#5e35b1]">Vòng Quay May Mắn:</p>
-                                                <p className="text-[10px] md:text-[11px] text-gray-500 font-medium leading-tight">Quay nón để định giá chữ cái. Tránh ô PHÁ SẢN làm mất sạch điểm quỹ.</p>
-                                            </div>
-                                        </li>
-                                        <li className="flex items-start gap-3 border-t border-gray-100 pt-3">
-                                            <span className="text-2xl flex-shrink-0">💡</span>
-                                            <div>
-                                                <p className="text-xs md:text-sm font-black text-[#1e88e5]">Gợi Ý Cổ Thư:</p>
-                                                <p className="text-[10px] md:text-[11px] text-gray-500 font-medium leading-tight">Đoán chữ để mở câu hỏi gợi ý. Mọi dấu thanh đều bị ẩn giấu.</p>
-                                            </div>
-                                        </li>
-                                        <li className="flex items-start gap-3 border-t border-gray-100 pt-3">
-                                            <span className="text-2xl flex-shrink-0">⌨️</span>
-                                            <div>
-                                                <p className="text-xs md:text-sm font-black text-[#757575]">Tự Giải Mật Mã:</p>
-                                                <p className="text-[10px] md:text-[11px] text-gray-500 font-medium leading-tight">Nhập đáp án không dấu vào các ô trống bên dưới để giải mã hoàn toàn.</p>
-                                            </div>
-                                        </li>
-                                        <li className="flex items-start gap-3 border-t border-gray-100 pt-3">
-                                            <span className="text-2xl flex-shrink-0">🏺</span>
-                                            <div>
-                                                <p className="text-xs md:text-sm font-black text-[#fbc02d]">Mốc Điểm Vượt Cấp:</p>
-                                                <p className="text-[10px] md:text-[11px] text-gray-500 font-medium leading-tight">Mỗi chương yêu cầu số điểm Quota tối thiểu để mở phong ấn bước tiếp.</p>
-                                            </div>
-                                        </li>
-                                            <li className="flex items-start gap-3 border-t border-gray-100 pt-3">
-                                            <span className="text-2xl flex-shrink-0">🐼</span>
-                                            <div>
-                                                <p className="text-xs md:text-sm font-black text-[#fbc02d]">Nhà Phát Hành Game:</p>
-                                                <p className="text-[10px] md:text-[11px] text-gray-500 font-medium leading-tight">Mình là PN-293 là người phát hành game . Chúc mọi người chơi game vui vẻ.</p>
-                                            </div>
-                                        </li>
-                                    </ul>
-                                </div>
-                                <button onClick={() => setShowIntro(false)} className="relative w-full max-w-[320px] btn-3d-shadow mb-2">
-                                    <div className="bg-gradient-to-r from-[#f15a24] to-[#ff8c3a] text-white font-black text-lg py-4 rounded-2xl border-2 border-white shadow-lg flex items-center justify-center gap-3">CHẤP NHẬN THỬ THÁCH 🚀</div>
-                                </button>
-                            </div>
-                        </div>
-                    )}
+                    <div className="stars-container"><div className="stars"></div><div className="twinkling"></div></div>
 
                     {/* HEADER */}
-                    <div className="relative z-20 flex justify-between items-center px-4 md:px-6 py-4 bg-black/70 border-b border-white/10 backdrop-blur-md flex-shrink-0">
+                    <div className="relative z-20 flex justify-between items-center px-4 md:px-10 py-4 bg-black/80 border-b border-white/10 backdrop-blur-md flex-shrink-0">
                         <div className="flex flex-col">
-                            <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-tight">Tiền quỹ</p>
-                            <p className="text-2xl md:text-4xl font-red text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-600 drop-shadow-glow">
+                            <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-tight">TIỀN QUỸ: {userName}</p>
+                            <p className="text-2xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-600 drop-shadow-glow leading-none">
                                 {score.toLocaleString()}đ
                             </p>
-                            <div className="mt-1 text-[8px] md:text-[9px] bg-blue-900/40 px-2 py-0.5 rounded border border-blue-500/30 w-fit">
-                                Mục tiêu LV{currentLevel + 2}: <span className="text-blue-300 font-bold">{(LEVEL_THRESHOLDS[currentLevel+1] || 0).toLocaleString()}đ</span>
+                            <div className="mt-1 text-[9px] md:text-[11px] bg-blue-900/60 px-3 py-1 rounded-full border border-yellow-500/50 w-fit text-[#fbbf24] font-black shadow-lg">
+                                LV{currentLevel + 2} Quota: {(LEVEL_THRESHOLDS[currentLevel+1] || 0).toLocaleString()}đ
                             </div>
                         </div>
 
                         <div className="flex flex-col items-center">
-                            <p className="text-[9px] text-slate-400 font-bold uppercase mb-1">⚡ Quota</p>
-                            <div className="flex items-center gap-2">
-                                <span className={`text-2xl md:text-3xl font-black ${spinsLeft <= 1 ? 'text-red-500 animate-pulse' : 'text-white'}`}>{spinsLeft}</span>
-                                <button 
-                                    onClick={() => { if(score >= 800) { setScore(s => s - 800); setSpinsLeft(l => l + 1); } }}
-                                    className="bg-emerald-600 hover:bg-emerald-500 text-white text-[8px] md:text-[10px] font-bold px-3 py-1.5 rounded-lg border-b-4 border-emerald-900 active:scale-95 shadow-lg whitespace-nowrap"
-                                >
-                                    +1⚡
+                            <div className="flex items-center gap-3">
+                                <div className="text-center">
+                                    <p className="text-[9px] text-white/40 uppercase font-black">Quota</p>
+                                    <span className={`text-3xl md:text-5xl font-black leading-none ${spinsLeft <= 1 ? 'text-red-500 animate-pulse' : 'text-white'}`}>{spinsLeft}</span>
+                                </div>
+                                <button onClick={() => { if(score >= 800) { setScore(s => s - 800); setSpinsLeft(l => l + 1); } }} className="bg-emerald-600 p-2 rounded-xl border-b-4 border-emerald-900 active:scale-95 flex flex-col items-center shadow-lg">
+                                    <span className="text-[10px] font-black text-white">+1⚡</span>
+                                    <span className="text-[7px] font-bold text-white/60">800đ</span>
                                 </button>
                             </div>
                         </div>
 
                         <div className="text-right flex flex-col items-end">
-                            <p className="text-[9px] text-blue-400 font-bold uppercase truncate max-w-[100px] md:max-w-[200px]">{statusMsg}</p>
-                            <p className="text-xl md:text-2xl font-black text-green-500 italic uppercase">Chương {currentLevel + 1}</p>
+                            <p className="text-[9px] text-blue-400 font-bold uppercase truncate max-w-[120px] md:max-w-[200px]">{statusMsg}</p>
+                            <p className="text-xl md:text-3xl font-black text-green-500 italic uppercase leading-none italic font-serif">Chương {currentLevel + 1}</p>
                         </div>
                     </div>
 
                     {/* MAIN GAME AREA */}
-                    <div className="relative z-20 flex-1 flex flex-col justify-center items-center p-4 gap-8 overflow-y-auto custom-scroll">
-                        {/* Di sản cổ thư */}
-                        <div className="w-full text-center py-2">
-                            <h3 className="text-[10px] md:text-[11px] text-indigo-400/60 font-black tracking-[0.4em] uppercase mb-4">DI SẢN CỔ THƯ</h3>
-                            <div className="flex flex-wrap justify-center gap-1.5 md:gap-2">
-                                {GAME_DATA[currentLevel].q.split(' ').map((word, wIdx) => (
-                                    <div key={wIdx} className="flex gap-1 mb-2 flex-shrink-0">
-                                        {word.split('').map((char, cIdx) => {
-                                            const baseChar = stripToneOnly(char);
-                                            const isReveal = revealedLetters.has(baseChar) || !VIET_ALPHABET.includes(baseChar);
-                                            return (
-                                                <div key={cIdx} className={`w-7 h-9 md:w-10 md:h-12 flex-shrink-0 flex items-center justify-center font-bold text-base md:text-xl rounded-md border transition-all duration-500 ${isReveal ? 'bg-white text-indigo-900 border-indigo-200 rotate-y-0 shadow-light' : 'bg-slate-800/60 border-slate-700 text-transparent rotate-y-180'}`}>
-                                                    {isReveal ? baseChar : ''}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                ))}
+                    <div className="relative z-20 flex-1 flex flex-col p-4 gap-4 overflow-y-auto custom-scroll">
+                        <div className="max-w-5xl mx-auto w-full flex flex-col items-center gap-10 py-6">
+                            {/* Di sản cổ thư */}
+                            <div className="w-full text-center flex-shrink-0">
+                                <h3 className="text-[10px] md:text-xs text-indigo-400/60 font-black tracking-[0.5em] uppercase mb-4">Di Sản Cổ Thư</h3>
+                                <div className="flex flex-wrap justify-center gap-1.5 md:gap-2">
+                                    {GAME_DATA[selectedTheme][currentLevel].q.split(' ').map((word, wIdx) => (
+                                        <div key={wIdx} className="flex gap-1 mb-2">
+                                            {word.split('').map((char, cIdx) => {
+                                                const baseChar = stripTone(char);
+                                                const isReveal = revealedLetters.has(baseChar) || !VIET_ALPHABET.includes(baseChar);
+                                                return (
+                                                    <div key={cIdx} className={`w-7 h-9 md:w-11 md:h-14 flex flex-shrink-0 items-center justify-center font-bold text-lg md:text-2xl rounded-lg border-2 transition-all duration-500 ${isReveal ? 'bg-white text-indigo-900 border-indigo-200 shadow-light' : 'bg-slate-800/40 border-slate-700 text-transparent'}`}>
+                                                        {isReveal ? baseChar : ''}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    ))}
+                                </div>
+                                <button onClick={() => setShowHint(true)} className="mt-4 text-[10px] font-black text-amber-500 hover:text-amber-300 transition-colors uppercase tracking-[0.2em] border-b border-amber-500/30 pb-1">💡 MỞ GỢI Ý CỔ NHÂN</button>
                             </div>
-                        </div>
 
-                        {/* Mật mã truy tìm */}
-                        <div className="w-full text-center py-4" id="answer-area">
-                            <h3 className="text-[10px] md:text-[11px] text-yellow-500/60 font-black tracking-[0.4em] uppercase mb-4 text-pulse">MẬT MÃ TRUY TÌM (TỰ ĐIỀN)</h3>
-                            <div className="flex flex-wrap justify-center gap-3 md:gap-4 mb-6">
-                                {GAME_DATA[currentLevel].a.split(' ').map((word, wIdx) => (
-                                    <div key={wIdx} className="flex gap-1.5 md:gap-2 flex-shrink-0">
-                                        {word.split('').map((char, cIdx) => {
-                                            const val = userGuessMap[`${wIdx}-${cIdx}`] || "";
-                                            return (
-                                                <input
-                                                    key={cIdx}
-                                                    id={`input-${wIdx}-${cIdx}`}
-                                                    type="text"
-                                                    maxLength="1"
-                                                    value={val}
-                                                    inputMode="text"
-                                                    autoComplete="off"
-                                                    autoCorrect="off"
-                                                    autoCapitalize="characters"
-                                                    spellCheck="false"
-                                                    enterKeyHint="next"
-                                                    onFocus={(e) => e.target.select()}
-                                                    onKeyDown={(e) => handleKeyDown(wIdx, cIdx, e)}
-                                                    onChange={(e) => handleInputChange(wIdx, cIdx, e.target.value)}
-                                                    className={`puzzle-input w-8 h-11 md:w-12 md:h-16 flex-shrink-0 bg-black/40 border-b-4 border-slate-700 flex items-center justify-center font-black text-center uppercase focus:outline-none focus:border-yellow-500 transition-all ${val ? 'text-white border-indigo-500 shadow-neon' : 'text-slate-500'}`}
-                                                />
-                                            );
-                                        })}
-                                    </div>
-                                ))}
+                            {/* Mật mã truy tìm */}
+                            <div className="w-full text-center flex-shrink-0" id="answer-area">
+                                <h3 className="text-[10px] md:text-xs text-yellow-500/60 font-black tracking-[0.5em] uppercase mb-4 text-pulse">Mật Mã Giải Mã (Tự Điền)</h3>
+                                <div className="flex flex-wrap justify-center gap-3 md:gap-4 mb-6">
+                                    {GAME_DATA[selectedTheme][currentLevel].a.split(' ').map((word, wIdx) => (
+                                        <div key={wIdx} className="flex gap-1.5 md:gap-2 flex-shrink-0">
+                                            {word.split('').map((char, cIdx) => {
+                                                const val = userGuessMap[`${wIdx}-${cIdx}`] || "";
+                                                return (
+                                                    <input
+                                                        key={cIdx} id={`input-${wIdx}-${cIdx}`} type="text" maxLength="1" value={val}
+                                                        inputMode="text" autoComplete="off" autoCorrect="off" autoCapitalize="characters"
+                                                        onFocus={e => e.target.select()}
+                                                        onKeyDown={e => {
+                                                            if (e.key === 'Backspace' && !val && (cIdx > 0 || wIdx > 0)) {
+                                                                const prevId = cIdx > 0 ? `input-${wIdx}-${cIdx-1}` : `input-${wIdx-1}-${GAME_DATA[selectedTheme][currentLevel].a.split(' ')[wIdx-1].length-1}`;
+                                                                document.getElementById(prevId)?.focus();
+                                                            }
+                                                        }}
+                                                        onChange={e => {
+                                                            const uv = stripTone(e.target.value.slice(-1));
+                                                            setUserGuessMap(prev => ({...prev, [`${wIdx}-${cIdx}`]: uv}));
+                                                            if (uv) {
+                                                                const nextId = (cIdx < word.length - 1) ? `input-${wIdx}-${cIdx+1}` : (wIdx < GAME_DATA[selectedTheme][currentLevel].a.split(' ').length - 1 ? `input-${wIdx+1}-0` : null);
+                                                                if (nextId) document.getElementById(nextId)?.focus();
+                                                            }
+                                                        }}
+                                                        className={`puzzle-input w-8 h-11 md:w-16 md:h-20 bg-black/40 border-b-4 border-slate-700 flex items-center justify-center font-black text-2xl md:text-5xl text-center uppercase focus:outline-none focus:border-yellow-500 transition-all ${val ? 'text-white border-indigo-500 shadow-neon' : 'text-slate-700'}`}
+                                                    />
+                                                );
+                                            })}
+                                        </div>
+                                    ))}
+                                </div>
+                                <button onClick={checkFinalAnswer} className="bg-gradient-to-r from-red-600 to-orange-600 text-white px-12 py-4 rounded-full font-black uppercase text-sm shadow-xl hover:scale-105 active:scale-95 transition-all tracking-widest border-2 border-white/20 uppercase">GIẢI MÃ KHO BÁU</button>
                             </div>
-                            <button 
-                                onClick={checkFinalAnswer}
-                                className="bg-gradient-to-r from-yellow-500 to-amber-600 text-black px-10 py-3 rounded-full font-black uppercase text-xs md:text-sm tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all"
-                            >
-                                GIẢI MÃ KHO BÁU
-                            </button>
                         </div>
                     </div>
 
                     {/* CONTROLS AREA */}
-                    <div className="relative z-20 bg-black/80 backdrop-blur-xl p-4 md:p-6 border-t border-white/10 flex flex-col md:flex-row items-center gap-4 md:gap-6 flex-shrink-0">
+                    <div className="relative z-30 bg-black/90 backdrop-blur-2xl p-4 md:px-10 border-t border-white/10 flex flex-col md:flex-row items-center gap-4 md:gap-6 flex-shrink-0">
                         <div className="flex items-center gap-6">
-                            <div className="relative group cursor-pointer" onClick={spinWheel}>
-                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-5 h-7 bg-red-600 z-30 clip-path-pointer drop-shadow-md border border-red-400"></div>
-                                <div className="relative w-32 h-32 md:w-40 md:h-40 bg-slate-900 rounded-full flex items-center justify-center border-4 md:border-8 border-white/5 overflow-hidden shadow-2xl">
-                                    <canvas ref={wheelCanvasRef} width="250" height="250" className={`w-full h-full transition-transform duration-[4000ms] ease-[cubic-bezier(0.1,0,0.1,1)] ${isSpinning ? 'blur-[2px]' : ''}`} style={{ transform: `rotate(${rotation}deg)` }}></canvas>
-                                    {wheelResultLabel && !isSpinning && (
-                                        <div className="absolute inset-0 flex items-center justify-center z-40">
-                                            <div className="bg-white text-black px-3 py-1.5 rounded-lg font-black text-base md:text-xl shadow-white animate-bounce">{wheelResultLabel}</div>
+                            <div className="relative group cursor-pointer" onClick={handleSpin}>
+                                <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-6 h-9 bg-red-600 z-30 clip-path-pointer shadow-lg border border-red-400"></div>
+                                <div className="relative w-36 h-36 md:w-44 md:h-44 bg-slate-900 rounded-full flex items-center justify-center border-4 border-white/10 overflow-hidden shadow-2xl">
+                                    <canvas ref={wheelRef} width="250" height="250" className={`w-full h-full transition-transform duration-[4000ms] ease-[cubic-bezier(0.1,0,0.1,1)] ${isSpinning ? 'blur-[2px]' : ''}`} style={{ transform: `rotate(${rotation}deg)` }}></canvas>
+                                    {wheelResult && !isSpinning && (
+                                        <div className="absolute inset-0 flex items-center justify-center z-40 bg-black/40 backdrop-blur-sm">
+                                            <div className="bg-white text-black px-4 py-2 rounded-xl font-black text-xl animate-bounce border-2 border-yellow-500 shadow-2xl">{wheelResult}</div>
                                         </div>
                                     )}
                                 </div>
                             </div>
                         </div>
 
-                        <div className="flex-1 w-full space-y-2">
-                            <p className="text-[9px] md:text-[10px] text-slate-500 font-bold uppercase tracking-widest text-center md:text-left">
-                                {canGuess ? "Chọn một ký tự câu hỏi" : "Hãy quay nón nạp năng lượng"}
+                        <div className="flex-1 w-full space-y-3">
+                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.3em] flex justify-between items-center px-2">
+                                <span>Thưởng hiện tại: {wheelResult ? wheelResult + 'đ/chữ' : '100đ/chữ'}</span>
+                                <span className="text-amber-500">-100đ / lần đoán sai</span>
                             </p>
-                            <div className="grid grid-cols-10 gap-1 md:gap-1.5">
+                            <div className="grid grid-cols-10 gap-1 md:gap-2">
                                 {VIET_ALPHABET.map(char => {
                                     const isSelected = revealedLetters.has(char);
                                     return (
-                                        <button key={char} onClick={() => handleLetterGuess(char)} disabled={!canGuess || isSelected} className={`aspect-square flex items-center justify-center font-bold text-[10px] md:text-sm rounded-md border-b-2 md:border-b-4 transition-all ${(!canGuess || isSelected) ? 'bg-slate-900/50 text-slate-700 border-slate-950 opacity-40' : 'bg-slate-800 text-white border-black hover:bg-indigo-800 active:scale-90 active:border-b-0'}`}>{char}</button>
+                                        <button key={char} onClick={() => guessLetter(char)} disabled={isSpinning || isSelected} className={`aspect-square flex items-center justify-center font-bold text-xs md:text-sm rounded-lg border-b-4 transition-all ${(isSpinning || isSelected) ? 'bg-slate-900/50 text-slate-700 border-slate-950 opacity-40' : 'bg-slate-800 text-white border-black hover:bg-indigo-700 active:scale-90 active:border-b-0'}`}>{char}</button>
                                     );
                                 })}
                             </div>
                         </div>
                     </div>
 
-                    {/* MODALS PHỤ (Recharge, Success, Fail, Victory) */}
-                    {showRecharge && (
-                        <div className="fixed inset-0 z-[600] bg-black/90 flex items-center justify-center p-6 backdrop-blur-md">
-                            <div className="bg-[#0f172a] p-8 md:p-10 rounded-[2rem] border-2 border-red-500 max-w-sm w-full text-center shadow-2xl">
-                                <div className="text-red-500 text-6xl mb-4 animate-pulse">⚡</div>
-                                <h2 className="text-xl md:text-2xl font-black mb-2 uppercase text-white">Nạp Năng Lượng</h2>
-                                <div className="bg-black/60 p-6 md:p-8 rounded-3xl mb-6 text-center">
-                                    <p className="text-xl md:text-2xl font-black mb-4 text-blue-400">{mathTask.q}</p>
-                                    <input type="number" autoFocus onKeyDown={(e) => { if (e.key === 'Enter') { if (parseInt(e.target.value) === mathTask.a) { setSpinsLeft(3); setShowRecharge(false); } else { e.target.value = ""; } } }} className="w-full bg-slate-900 text-white p-3 rounded-xl text-center text-2xl font-black border-2 border-red-600/30" placeholder="?" />
-                                </div>
+                    {/* MODALS SECTION */}
+                    {showHint && (
+                        <div className="fixed inset-0 z-[800] bg-black/90 flex items-center justify-center p-6 backdrop-blur-md">
+                            <div className="bg-slate-900 p-8 rounded-[2rem] border-2 border-amber-500 max-w-sm w-full text-center shadow-2xl animate-in zoom-in duration-300">
+                                <h2 className="text-xl font-black text-amber-500 mb-6 uppercase">Cổ Nhân Gợi Ý</h2>
+                                <p className="text-white text-lg font-serif italic mb-8 leading-relaxed">"{GAME_DATA[selectedTheme][currentLevel].hint}"</p>
+                                <button onClick={() => setShowHint(false)} className="w-full bg-amber-600 text-white py-4 rounded-2xl font-black uppercase shadow-lg">ĐÃ HIỂU</button>
                             </div>
                         </div>
                     )}
 
-                    {showSuccessModal && (
-                        <div className="fixed inset-0 z-[600] bg-black/95 flex items-center justify-center p-6 backdrop-blur-lg text-center">
-                            <div className="bg-[#0f172a] p-8 md:p-10 rounded-[3rem] border-4 border-emerald-500/30 max-w-sm w-full shadow-2xl">
-                                <div className="text-6xl md:text-7xl mb-6">🏆</div>
-                                <h2 className="text-2xl md:text-3xl font-black mb-2 text-white uppercase font-serif tracking-tighter">THÀNH CÔNG</h2>
-                                <p className="text-slate-400 mb-6 text-xs md:text-sm italic font-serif">"{GAME_DATA[currentLevel].desc}"</p>
-                                <div className="bg-black/40 p-4 md:p-5 rounded-2xl mb-8 border border-emerald-500/20">
-                                    <p className="text-3xl md:text-4xl font-black text-emerald-400">{score.toLocaleString()}đ</p>
+                    {showSuccess && (
+                        <div className="fixed inset-0 z-[800] bg-black/95 flex items-center justify-center p-6 backdrop-blur-xl text-center">
+                            <div className="bg-slate-900 p-8 md:p-10 rounded-[3rem] border-4 border-emerald-500 max-w-sm w-full shadow-2xl animate-in zoom-in duration-300">
+                                <div className="text-7xl mb-6 animate-bounce">🏺</div>
+                                <h2 className="text-3xl font-black mb-2 text-white uppercase tracking-tighter">THÀNH CÔNG</h2>
+                                <p className="text-slate-400 mb-8 text-sm italic">"{GAME_DATA[selectedTheme][currentLevel].desc}"</p>
+                                <div className="bg-black/40 p-5 rounded-2xl mb-8 border border-emerald-500/20">
+                                    <p className="text-4xl font-black text-emerald-400">+1,000đ</p>
                                 </div>
-                                <button onClick={handleNextLevel} className="w-full bg-emerald-600 hover:bg-emerald-500 py-3 md:py-4 rounded-xl font-black text-lg shadow-lg active:scale-95">TIẾP THEO</button>
+                                <button onClick={() => { setShowSuccess(false); handleNextLevel(); }} className="w-full bg-emerald-600 hover:bg-emerald-500 py-4 rounded-xl font-black text-lg shadow-lg active:scale-95 transition-all">TIẾP THEO</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {showFail && (
+                        <div className="fixed inset-0 z-[800] bg-black/90 flex items-center justify-center p-6 backdrop-blur-md">
+                            <div className="bg-slate-900 p-8 rounded-[3rem] border-4 border-red-600 max-w-sm w-full text-center shadow-2xl animate-in shake duration-500">
+                                <div className="text-7xl mb-6">❌</div>
+                                <h2 className="text-2xl font-black mb-4 text-white uppercase">SAI LẦM</h2>
+                                <p className="text-slate-400 text-sm mb-8 italic">Mật mã cổ vật không chính xác. (-200đ)</p>
+                                <button onClick={() => setShowFail(false)} className="w-full bg-red-600 py-4 rounded-xl font-black text-white uppercase shadow-lg">THỬ LẠI</button>
                             </div>
                         </div>
                     )}
 
                     {showFailThresholdModal && (
-                        <div className="fixed inset-0 z-[600] bg-black/95 flex items-center justify-center p-6 text-center">
-                            <div className="bg-slate-900 p-10 rounded-3xl border-4 border-red-600 max-w-sm w-full shadow-2xl">
-                                <div className="text-6xl md:text-7xl mb-6">🚫</div>
-                                <h2 className="text-xl md:text-2xl font-black mb-4 uppercase text-white tracking-tighter">Chưa Đủ Điểm</h2>
-                                <p className="text-slate-400 text-xs md:text-sm mb-8 leading-relaxed italic">Bạn cần tối thiểu <span className="text-red-500 font-bold">{LEVEL_THRESHOLDS[currentLevel + 1].toLocaleString()}đ</span> để mở phong ấn. Hiện có: <span className="font-bold text-white">{score.toLocaleString()}đ</span>.</p>
-                                <button onClick={() => location.reload()} className="w-full bg-red-600 py-3 md:py-4 rounded-xl font-black text-white active:scale-95 shadow-lg">BẮT ĐẦU LẠI</button>
+                        <div className="fixed inset-0 z-[900] bg-black/95 flex items-center justify-center p-6 text-center">
+                            <div className="bg-slate-900 p-10 rounded-3xl border-4 border-red-600 max-w-sm w-full shadow-2xl animate-in zoom-in duration-300">
+                                <div className="text-7xl mb-6">🚫</div>
+                                <h2 className="text-xl font-black mb-4 text-white uppercase tracking-tighter">PHONG ẤN CHƯA MỞ</h2>
+                                <p className="text-slate-400 text-xs md:text-sm mb-8 leading-relaxed italic text-center">Bạn cần tối thiểu <span className="text-red-500 font-bold">{LEVEL_THRESHOLDS[currentLevel + 1].toLocaleString()}đ</span> mới được bước tiếp. Hãy quay nón để tích lũy thêm!</p>
+                                <button onClick={() => setShowFailThresholdModal(false)} className="w-full bg-red-600 py-4 rounded-xl font-black text-white active:scale-95 shadow-lg uppercase mt-4">Ở LẠI CÀY ĐIỂM</button>
                             </div>
                         </div>
                     )}
 
-                    {gameOver && (
-                        <div className="fixed inset-0 z-[700] bg-[#020617] flex flex-col items-center justify-center p-8 text-center">
-                            <div className="text-8xl md:text-9xl mb-8 animate-pulse drop-shadow-glow">👑</div>
-                            <h1 className="text-4xl md:text-6xl font-black text-yellow-500 mb-4 uppercase italic tracking-tighter">ĐẠI SƯ VĨNH HẰNG</h1>
-                            <p className="text-slate-300 mb-12 text-lg md:text-xl font-serif">Tổng di sản tích lũy: <span className="text-emerald-400 font-bold">{score.toLocaleString()}đ</span></p>
-                            <button onClick={() => location.reload()} className="bg-white text-black px-12 md:px-16 py-4 md:py-5 rounded-full font-black text-xl md:text-2xl shadow-xl hover:scale-105 active:scale-95 transition-all">TÁI SINH</button>
+                    {showRecharge && (
+                        <div className="fixed inset-0 z-[1000] bg-black/90 flex items-center justify-center p-6 backdrop-blur-md">
+                            <div className="bg-[#0f172a] p-8 md:p-10 rounded-[2rem] border-2 border-red-500 max-w-sm w-full text-center shadow-2xl animate-in slide-in-from-bottom duration-300">
+                                <div className="text-red-500 text-5xl md:text-6xl mb-4 animate-pulse">⚡</div>
+                                <h2 className="text-xl md:text-2xl font-black mb-2 uppercase text-white tracking-tighter">Hết Quota</h2>
+                                <p className="text-slate-400 text-xs mb-8 italic text-center">Giải thuật số sau để nhận 3⚡ năng lượng</p>
+                                <div className="bg-black/60 p-6 rounded-3xl mb-6">
+                                    <p className="text-3xl font-black mb-6 text-blue-400 tracking-tighter">{mathTask.q}</p>
+                                    <input type="number" autoFocus onKeyDown={(e) => { if (e.key === 'Enter') { if (parseInt(e.target.value) === mathTask.a) { setSpinsLeft(3); setShowRecharge(false); } else { e.target.value = ""; } } }} className="w-full bg-slate-900 text-white p-4 rounded-xl text-center text-4xl font-black border-2 border-red-600/30 focus:outline-none" placeholder="?" />
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>
