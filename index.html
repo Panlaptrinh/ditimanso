@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Hành Trình Kho Báu Việt - PN 293</title>
+    <title>HÀNH TRÌNH KHO BÁU VIỆT - PN 293</title>
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- React, ReactDOM, and Babel for standalone execution -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <!-- Firebase Libraries -->
+    <!-- Firebase Libraries (Legacy Compat mode for easier setup) -->
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore-compat.js"></script>
@@ -74,13 +74,26 @@
     <script type="text/babel">
         const { useState, useEffect, useRef, useCallback } = React;
 
-        // Firebase Configuration
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "" };
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        const auth = firebase.auth();
+        // --- Cấu hình Firebase & Fallback cho GitHub ---
+        const getFirebaseConfig = () => {
+            try {
+                if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                    return JSON.parse(__firebase_config);
+                }
+            } catch (e) {}
+            return null; // Trả về null nếu không có config (chế độ GitHub)
+        };
+
+        const config = getFirebaseConfig();
+        const firebaseReady = config && config.apiKey;
+        if (firebaseReady && !firebase.apps.length) {
+            firebase.initializeApp(config);
+        }
+        const db = firebaseReady ? firebase.firestore() : null;
+        const auth = firebaseReady ? firebase.auth() : null;
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'treasure-hunt-vn';
 
+        // --- Dữ liệu Game ---
         const LEVEL_THRESHOLDS = [0, 5000, 15000, 30000, 50000, 75000, 105000, 140000, 180000, 230000, 280000, 340000, 400000, 470000, 550000, 640000, 740000, 850000, 970000, 1100000];
 
         const WHEEL_SEGMENTS = [
@@ -106,45 +119,40 @@
 
         const GAME_DATA = {
             cadao: [
-                { q: "Bầu ơi thương lấy bí cùng, tuy rằng khác giống nhưng chung một giàn", a: "BẦU BÍ", hint: "Tình đoàn kết, tương thân tương ái giữa con người.", desc: "Đùm bọc lẫn nhau trong hoạn nạn." },
-                { q: "Công cha như núi Thái Sơn, nghĩa mẹ như nước trong nguồn chảy ra", a: "CÔNG CHA", hint: "Nói về công lao to lớn của bậc sinh thành.", desc: "Hiếu thảo với cha mẹ." },
-                { q: "Ăn quả nhớ kẻ trồng cây, ăn khoai nhớ kẻ cho dây mà trồng", a: "TRÂN TRỌNG", hint: "Lòng biết ơn đối với những người đã giúp đỡ mình.", desc: "Đạo lý uống nước nhớ nguồn." },
-                { q: "Một cây làm chẳng nên non, ba cây chụm lại nên hòn núi cao", a: "ĐOÀN KẾT", hint: "Sức mạnh của sự đồng lòng và tập thể.", desc: "Đoàn kết là sức mạnh." },
-                { q: "Đi một ngày đàng học một sàng khôn", a: "HỌC HỎI", hint: "Khuyên con người nên đi đây đi đó để mở mang kiến thức.", desc: "Trải nghiệm thực tế quý báu." },
-                { q: "Nhiễu điều phủ lấy giá gương, người trong một nước phải thương nhau cùng", a: "NHIỄU ĐIỀU", hint: "Sự đoàn kết, yêu thương của đồng bào.", desc: "Tình dân tộc nghĩa đồng bào." },
-                { q: "Chuồn chuồn bay thấp thì mưa, bay cao thì nắng, bay vừa thì râm", a: "CHUỒN CHUỒN", hint: "Kinh nghiệm dự báo thời tiết dựa vào loài vật.", desc: "Tri thức dân gian về thiên nhiên." },
-                { q: "Cày đồng đang buổi ban trưa, mồ hôi thánh thót như mưa ruộng cày", a: "VẤT VẢ", hint: "Sự gian khổ của người nông dân trên đồng ruộng.", desc: "Quý trọng hạt gạo làm ra." },
-                { q: "Không thầy đố mày làm nên", a: "THẦY CÔ", hint: "Nhấn mạnh vai trò quan trọng của người dạy dỗ.", desc: "Tôn sư trọng đạo." },
-                { q: "Trong đầm gì đẹp bằng sen, lá xanh bông trắng lại chen nhị vàng", a: "HOA SEN", hint: "Vẻ đẹp thuần khiết của loài hoa quốc hồn quốc túy.", desc: "Sống trong sạch, liêm khiết." },
-                { q: "Lá lành đùm lá rách, lá rách ít đùm lá rách nhiều", a: "SẺ CHIA", hint: "Lòng nhân hậu, giúp đỡ người khó khăn hơn mình.", desc: "Lá lành đùm lá rách." },
-                { q: "Anh em như thể tay chân, rách lành đùm bọc, dở hay đỡ đần", a: "ANH EM", hint: "Tình cảm gắn bó mật thiết giữa các thành viên gia đình.", desc: "Tình anh em máu mủ." },
-                { q: "Cá không ăn muối cá ươn, con cãi cha mẹ trăm đường con hư", a: "LỜI DẠY", hint: "Sự cần thiết của việc nghe theo lời khuyên bảo.", desc: "Hiếu thảo và vâng lời." },
-                { q: "Tấc đất tấc vàng", a: "QUÝ GIÁ", hint: "Nói về giá trị to lớn của đất đai sản xuất.", desc: "Đất đai là tài sản quý báu." },
-                { q: "Trâu ơi ta bảo trâu này, trâu ra ngoài ruộng trâu cày với ta", a: "CON TRÂU", hint: "Người bạn thân thiết của nhà nông Việt Nam.", desc: "Con trâu là đầu cơ nghiệp." },
-                { q: "Gần mực thì đen, gần đèn thì rạng", a: "MÔI TRƯỜNG", hint: "Sự ảnh hưởng của môi trường xung quanh đến con người.", desc: "Chọn bạn mà chơi." },
-                { q: "Chị ngã em nâng", a: "CHỊ EM", hint: "Sự giúp đỡ, đùm bọc lẫn nhau giữa anh chị em.", desc: "Tình thân gia đình." },
-                { q: "Học thầy không tày học bạn", a: "GIAO LƯU", hint: "Khuyên con người nên học hỏi từ bạn bè đồng trang lứa.", desc: "Học đi đôi với hành." },
-                { q: "Thương người như thể thương thân", a: "NHÂN ÁI", hint: "Lòng trắc ẩn, yêu thương người khác như chính mình.", desc: "Tấm lòng nhân hậu." },
-                { q: "Có công mài sắt có ngày nên kim", a: "KIÊN TRÌ", hint: "Sự bền bỉ, nhẫn nại sẽ dẫn đến thành công.", desc: "Lòng kiên trì vượt khó." }
+                { q: "Bầu ơi thương lấy bí cùng, tuy rằng khác giống nhưng chung một giàn", a: "BAU BI", hint: "Sự đoàn kết đùm bọc.", desc: "Đạo lý tương thân tương ái." },
+                { q: "Công cha như núi Thái Sơn, nghĩa mẹ như nước trong nguồn chảy ra", a: "CONG CHA", hint: "Nói về công lao sinh thành.", desc: "Đạo hiếu làm đầu." },
+                { q: "Ăn quả nhớ kẻ trồng cây, ăn khoai nhớ kẻ cho dây mà trồng", a: "BIET ON", hint: "Lòng biết ơn người đi trước.", desc: "Uống nước nhớ nguồn." },
+                { q: "Một cây làm chẳng nên non, ba cây chụm lại nên hòn núi cao", a: "DOAN KET", hint: "Sức mạnh của tập thể.", desc: "Đoàn kết là sức mạnh." },
+                { q: "Đi một ngày đàng học một sàng khôn", a: "HOC HOI", hint: "Khuyên đi xa để mở mang tầm mắt.", desc: "Trải nghiệm thực tế quý báu." },
+                { q: "Nhiễu điều phủ lấy giá gương, người trong một nước phải thương nhau cùng", a: "NHIEU DIEU", hint: "Tình đồng bào một nhà.", desc: "Đoàn kết dân tộc." },
+                { q: "Chuồn chuồn bay thấp thì mưa, bay cao thì nắng, bay vừa thì râm", a: "CHUON CHUON", hint: "Dự báo thời tiết dân gian.", desc: "Kinh nghiệm nhà nông." },
+                { q: "Cày đồng đang buổi ban trưa, mồ hôi thánh thót như mưa ruộng cày", a: "VAT VA", hint: "Sự gian khổ làm ra hạt gạo.", desc: "Quý trọng mồ hôi công sức." },
+                { q: "Không thầy đố mày làm nên", a: "THAY CO", hint: "Vai trò người dạy dỗ.", desc: "Tôn sư trọng đạo." },
+                { q: "Trong đầm gì đẹp bằng sen, lá xanh bông trắng lại chen nhị vàng", a: "HOA SEN", hint: "Loài hoa thanh khiết nhất.", desc: "Quốc hoa Việt Nam." },
+                { q: "Lá lành đùm lá rách, lá rách ít đùm lá rách nhiều", a: "SE CHIA", hint: "Giúp đỡ người khó khăn.", desc: "Lá lành đùm lá rách." },
+                { q: "Anh em như thể tay chân, rách lành đùm bọc, dở hay đỡ đần", a: "ANH EM", hint: "Tình cảm máu mủ ruột rà.", desc: "Tình anh em bền chặt." },
+                { q: "Cá không ăn muối cá ươn, con cãi cha mẹ trăm đường con hư", a: "VANG LOI", hint: "Nghe lời khuyên bảo cha mẹ.", desc: "Đạo làm con." },
+                { q: "Tấc đất tấc vàng", a: "QUY GIA", hint: "Giá trị đất đai sản xuất.", desc: "Đất là vàng bạc." },
+                { q: "Trâu ơi ta bảo trâu này, trâu ra ngoài ruộng trâu cày với ta", a: "CON TRAU", hint: "Bạn thân thiết nhà nông.", desc: "Đầu cơ nghiệp." },
+                { q: "Gần mực thì đen, gần đèn thì rạng", a: "MOI TRUONG", hint: "Sự ảnh hưởng từ xung quanh.", desc: "Chọn bạn mà chơi." },
+                { q: "Chị ngã em nâng", a: "CHI EM", hint: "Đùm bọc trong gia đình.", desc: "Tình thân ruột thịt." },
+                { q: "Học thầy không tày học bạn", a: "GIAO LUU", hint: "Học hỏi từ bạn bè.", desc: "Mở mang kiến thức." },
+                { q: "Thương người như thể thương thân", a: "NHAN AI", hint: "Lòng trắc ẩn yêu người.", desc: "Tấm lòng nhân hậu." },
+                { q: "Có công mài sắt có ngày nên kim", a: "KIEN TRI", hint: "Bền bỉ ắt thành công.", desc: "Chí có vững mới thành tài." }
             ],
             amthuc: [
-                { q: "Món ăn quốc hồn quốc túy của Việt Nam, nước dùng thanh ngọt?", a: "PHỞ", hint: "Thường ăn kèm bò hoặc gà.", desc: "Tinh túy ẩm thực Việt." },
-                { q: "Đặc sản của Hội An, sợi mì vàng, ăn với tôm thịt?", a: "CAO LẦU", hint: "Nước dùng lấy từ giếng cổ Bá Lễ.", desc: "Món ngon phố cổ." },
-                { q: "Món bánh có vỏ mỏng, nhân tôm thịt, đặc sản Nam Bộ?", a: "BÁNH XÈO", hint: "Ăn kèm rất nhiều rau sống.", desc: "Giòn rụm hương vị miền Tây." },
-                { q: "Bún chả là đặc sản nổi tiếng của thành phố nào?", a: "HÀ NỘI", hint: "Cố Thủ tướng Obama từng ăn.", desc: "Hương vị thủ đô." },
-                { q: "Món bún mang hương vị mắm ruốc, chân giò?", a: "BÚN BÒ HUẾ", hint: "Cố đô của Việt Nam.", desc: "Đậm đà phong vị miền Trung." }
+                { q: "Món ăn quốc hồn quốc túy của Việt Nam, nước dùng thanh ngọt?", a: "PHO", hint: "Thường ăn kèm bò hoặc gà.", desc: "Tinh túy ẩm thực Việt." },
+                { q: "Đặc sản của Hội An, sợi mì vàng, ăn với tôm thịt?", a: "CAO LAU", hint: "Nước dùng từ giếng cổ.", desc: "Món ngon phố cổ." },
+                { q: "Bánh tráng cuốn thịt heo nổi tiếng nhất ở đâu?", a: "DA NANG", hint: "Thành phố của những cây cầu.", desc: "Món ngon miền Trung." }
             ],
             tinhthanh: [
                 { q: "Thành phố ngàn hoa, khí hậu ôn hòa?", a: "DA LAT", hint: "Tỉnh Lâm Đồng.", desc: "Thành phố mộng mơ." },
-                { q: "Hòn ngọc Viễn Đông?", a: "SAI GON", hint: "TP. Hồ Chí Minh.", desc: "Thành phố năng động." },
-                { q: "Thành phố trực thuộc TW nào có cầu Rồng?", a: "DA NANG", hint: "Thủ phủ miền Trung.", desc: "Thành phố đáng sống." },
-                { q: "Tỉnh nào có vịnh Hạ Long?", a: "QUANG NINH", hint: "Kỳ quan thiên nhiên thế giới.", desc: "Đất mỏ kỳ quan." },
-                { q: "Mũi Cà Mau thuộc tỉnh nào?", a: "CA MAU", hint: "Cực Nam Tổ quốc.", desc: "Đất mũi linh thiêng." }
+                { q: "Hòn ngọc Viễn Đông?", a: "SAI GON", hint: "TP. Hồ Chí Minh.", desc: "Thành phố năng động." }
             ]
         };
 
         function App() {
-            const [gameState, setGameState] = useState('INTRO'); // INTRO, LOGIN, CODE, THEME_SELECT, PLAY
+            const [gameState, setGameState] = useState('INTRO'); 
             const [userName, setUserName] = useState('');
             const [selectedTheme, setSelectedTheme] = useState('cadao');
             const [currentLevel, setCurrentLevel] = useState(0);
@@ -164,19 +172,23 @@
             const [wheelResult, setWheelResult] = useState("");
             const [mathTask, setMathTask] = useState({ q: "", a: 0 });
             const [gameOver, setGameOver] = useState(false);
-            const [user, setUser] = useState(null);
             const [giftCodeInput, setGiftCodeInput] = useState("");
             const [codeError, setCodeError] = useState(false);
+            const [user, setUser] = useState(null);
 
             const wheelRef = useRef(null);
 
+            // Auth Logic
             useEffect(() => {
-                const initAuth = async () => {
-                    try { await auth.signInAnonymously(); } catch (e) {}
-                };
-                initAuth();
-                const unsub = auth.onAuthStateChanged(u => setUser(u));
-                return () => unsub();
+                if (firebaseReady) {
+                    const initAuth = async () => {
+                        try {
+                            const cred = await auth.signInAnonymously();
+                            setUser(cred.user);
+                        } catch (e) { console.warn("Firebase Auth Error:", e); }
+                    };
+                    initAuth();
+                }
             }, []);
 
             const stripTone = (str) => {
@@ -199,7 +211,7 @@
 
             useEffect(() => {
                 if (gameState === 'PLAY') {
-                    setTimeout(() => drawWheel(wheelRef.current), 100);
+                    setTimeout(() => drawWheel(wheelRef.current), 200);
                 }
             }, [gameState]);
 
@@ -225,17 +237,16 @@
                         setStatusMsg("Mất lượt quay!");
                     } else if (result.value === -3) {
                         setSpinsLeft(s => s + 1);
-                        setStatusMsg("May mắn! +1 lượt quay.");
+                        setStatusMsg("May mắn! +1 lượt.");
                     } else {
                         setCurrentWheelValue(result.value);
-                        setStatusMsg(`Nhân giá trị thưởng: x${result.label}đ!`);
+                        setStatusMsg(`Giá trị x${result.label}đ đã kích hoạt!`);
                     }
                 }, 4000);
             };
 
             const guessLetter = (char) => {
                 if (isSpinning) return;
-                
                 const data = GAME_DATA[selectedTheme][currentLevel];
                 const cleanChar = stripTone(char);
                 const questionBase = stripTone(data.q);
@@ -245,7 +256,7 @@
                 if (count > 0) {
                     setScore(s => s + (count * currentWheelValue));
                     setRevealedLetters(new Set([...revealedLetters, cleanChar]));
-                    setStatusMsg(`Chính xác! Có ${count} chữ ${char}.`);
+                    setStatusMsg(`Có ${count} chữ ${char}! Nhận ${count * currentWheelValue}đ.`);
                 } else {
                     setScore(s => Math.max(0, s - 100)); 
                     setStatusMsg(`Tiếc quá! Không có chữ ${char}. (-100đ)`);
@@ -263,7 +274,7 @@
             };
 
             const saveProgress = async (newScore, newLevel) => {
-                if (!user || !userName) return;
+                if (!firebaseReady || !userName) return;
                 try {
                     await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('saves').doc(userName).set({
                         userName, score: newScore, level: newLevel, theme: selectedTheme, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -277,7 +288,8 @@
                 let correct = true;
                 words.forEach((w, wIdx) => {
                     w.split('').forEach((c, cIdx) => {
-                        if ((userGuessMap[`${wIdx}-${cIdx}`] || "").toUpperCase() !== stripTone(c)) correct = false;
+                        const uVal = (userGuessMap[`${wIdx}-${cIdx}`] || "").toUpperCase();
+                        if (uVal !== stripTone(c)) correct = false;
                     });
                 });
 
@@ -300,7 +312,7 @@
                     setCurrentLevel(nextIdx);
                     setUserGuessMap({});
                     setRevealedLetters(new Set());
-                    setStatusMsg("Vượt chương thành công!");
+                    setStatusMsg("Giải mã chương tiếp theo!");
                 }
             };
 
@@ -310,7 +322,7 @@
                         <div className="relative w-full max-w-[460px] bg-white rounded-[45px] border-[10px] border-[#ffcc33] flex flex-col items-center p-5 md:p-8 shadow-2xl animate-in zoom-in duration-300 my-auto">
                             <div className="absolute top-4 left-6 opacity-10 text-7xl grayscale select-none">🗺️</div>
                             <div className="text-center mb-6 relative z-10">
-                                <h1 className="text-[#f15a24] text-4xl md:text-5xl font-black uppercase tracking-tight mb-1">Hành Trình Kho Báu Việt</h1>
+                                <h1 className="text-[#f15a24] text-4xl md:text-5xl font-black uppercase tracking-tight mb-1">HÀNH TRÌNH KHO BÁU VIỆT</h1>
                                 <div className="bg-[#ffe8ed] px-5 py-1 rounded-full inline-block">
                                     <span className="text-[#ff4d6d] font-bold text-xs md:text-sm uppercase tracking-widest italic">Độ khó: Bậc thầy</span>
                                 </div>
@@ -339,17 +351,10 @@
                                             <p className="text-[10px] md:text-[11px] text-gray-500 font-medium leading-tight">Phần dưới là mật mã rỗng. Tự gõ đáp án (không dấu) để thắng màn.</p>
                                         </div>
                                     </li>
-                                    <li className="flex items-start gap-3 border-t border-gray-100 pt-3">
-                                        <span className="text-2xl flex-shrink-0">🏺</span>
-                                        <div>
-                                            <p className="text-xs md:text-sm font-black text-[#fbc02d]">Điểm Quota:</p>
-                                            <p className="text-[10px] md:text-[11px] text-gray-500 font-medium leading-tight">Mỗi chương yêu cầu số điểm Quota tối thiểu để mở phong ấn bước tiếp.</p>
-                                        </div>
-                                    </li>
                                 </ul>
                             </div>
                             <button onClick={() => setGameState('LOGIN')} className="relative w-full max-w-[320px] btn-3d-shadow mb-2">
-                                <div className="bg-gradient-to-r from-[#f15a24] to-[#ff8c3a] text-white font-black text-lg py-4 rounded-2xl border-2 border-white shadow-lg flex items-center justify-center gap-3 uppercase">TIẾP TỤC ➔</div>
+                                <div className="bg-gradient-to-r from-[#f15a24] to-[#ff8c3a] text-white font-black text-lg py-4 rounded-2xl border-2 border-white shadow-lg flex items-center justify-center gap-3 uppercase">BẮT ĐẦU ➔</div>
                             </button>
                         </div>
                     </div>
@@ -380,9 +385,9 @@
                         <div className={`bg-white rounded-[40px] border-[10px] border-[#fbbf24] p-8 w-full max-w-md shadow-2xl text-center transition-transform ${codeError ? 'animate-shake' : 'animate-in zoom-in'}`}>
                             <div className="text-6xl mb-4 gift-glow">🎁</div>
                             <h2 className="text-2xl font-black text-[#f15a24] uppercase mb-4">PN TẶNG QUÀ</h2>
-                            <p className="text-gray-600 mb-6 font-bold leading-tight">Nhập mã Gift Code từ nhà phát hành PN để nhận <span className="text-emerald-600">2,209đ</span> khởi nghiệp!</p>
+                            <p className="text-gray-600 mb-6 font-bold leading-tight">Nhập mã Gift Code từ PN để nhận <span className="text-emerald-600">2,209đ</span> khởi nghiệp!</p>
                             <div className="bg-orange-50 p-2 rounded-lg mb-6 border border-orange-200">
-                                <p className="text-[10px] text-orange-400 font-bold uppercase text-center">Mã của bạn là: PN2209</p>
+                                <p className="text-[10px] text-orange-400 font-bold uppercase text-center tracking-widest">Mã của bạn là: PN2209</p>
                             </div>
                             <input 
                                 value={giftCodeInput} 
@@ -407,7 +412,7 @@
                             <p className="text-white/40 text-sm mb-10">Chào {userName}, hãy chọn hành trình của bạn</p>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
                                 {THEMES.map(t => (
-                                    <div key={t.id} onClick={() => { setSelectedTheme(t.id); setGameState('PLAY'); }} className="theme-card cursor-pointer bg-white/5 border border-white/10 p-6 rounded-[2rem] flex flex-col items-center hover:bg-white/10">
+                                    <div key={t.id} onClick={() => { setSelectedTheme(t.id); setGameState('PLAY'); }} className="theme-card cursor-pointer bg-white/5 border border-white/10 p-6 rounded-[2rem] flex flex-col items-center hover:bg-white/10 shadow-lg">
                                         <span className="text-5xl mb-4">{t.icon}</span>
                                         <h3 className="text-white font-black text-sm uppercase">{t.name}</h3>
                                     </div>
@@ -450,17 +455,17 @@
 
                         <div className="text-right flex flex-col items-end">
                             <p className="text-[9px] text-blue-400 font-bold uppercase truncate max-w-[120px] md:max-w-[200px]">{statusMsg}</p>
-                            <p className="text-xl md:text-3xl font-black text-green-500 italic uppercase leading-none italic font-serif">Chương {currentLevel + 1}</p>
+                            <p className="text-xl md:text-3xl font-black text-green-500 italic uppercase leading-none font-serif">Chương {currentLevel + 1}</p>
                         </div>
                     </div>
 
                     {/* MAIN GAME AREA */}
                     <div className="relative z-20 flex-1 flex flex-col p-4 gap-4 overflow-y-auto custom-scroll">
-                        <div className="max-w-5xl mx-auto w-full flex flex-col items-center gap-10 py-6">
+                        <div className="max-w-5xl mx-auto w-full flex flex-col items-center gap-8 py-6">
                             {/* Di sản cổ thư */}
                             <div className="w-full text-center flex-shrink-0">
                                 <h3 className="text-[10px] md:text-xs text-indigo-400/60 font-black tracking-[0.5em] uppercase mb-4">Di Sản Cổ Thư</h3>
-                                <div className="flex flex-wrap justify-center gap-1.5 md:gap-2">
+                                <div className="flex flex-wrap justify-center gap-1 md:gap-2 px-2">
                                     {GAME_DATA[selectedTheme][currentLevel].q.split(' ').map((word, wIdx) => (
                                         <div key={wIdx} className="flex gap-1 mb-2">
                                             {word.split('').map((char, cIdx) => {
@@ -475,15 +480,15 @@
                                         </div>
                                     ))}
                                 </div>
-                                <button onClick={() => setShowHint(true)} className="mt-4 text-[10px] font-black text-amber-500 hover:text-amber-300 transition-colors uppercase tracking-[0.2em] border-b border-amber-500/30 pb-1">💡 MỞ GỢI Ý CỔ NHÂN</button>
+                                <button onClick={() => setShowHint(true)} className="mt-4 text-[10px] font-black text-[#fbbf24] hover:text-white transition-colors uppercase tracking-[0.2em] border-b border-[#fbbf24]/30 pb-1 shadow-sm">💡 MỞ GỢI Ý CỔ NHÂN</button>
                             </div>
 
                             {/* Mật mã truy tìm */}
                             <div className="w-full text-center flex-shrink-0" id="answer-area">
                                 <h3 className="text-[10px] md:text-xs text-yellow-500/60 font-black tracking-[0.5em] uppercase mb-4 text-pulse">Mật Mã Giải Mã (Tự Điền)</h3>
-                                <div className="flex flex-wrap justify-center gap-3 md:gap-4 mb-6">
+                                <div className="flex flex-wrap justify-center gap-2 md:gap-4 mb-8 px-4">
                                     {GAME_DATA[selectedTheme][currentLevel].a.split(' ').map((word, wIdx) => (
-                                        <div key={wIdx} className="flex gap-1.5 md:gap-2 flex-shrink-0">
+                                        <div key={wIdx} className="flex gap-1 md:gap-2 flex-shrink-0">
                                             {word.split('').map((char, cIdx) => {
                                                 const val = userGuessMap[`${wIdx}-${cIdx}`] || "";
                                                 return (
@@ -505,7 +510,7 @@
                                                                 if (nextId) document.getElementById(nextId)?.focus();
                                                             }
                                                         }}
-                                                        className={`puzzle-input w-8 h-11 md:w-16 md:h-20 bg-black/40 border-b-4 border-slate-700 flex items-center justify-center font-black text-2xl md:text-5xl text-center uppercase focus:outline-none focus:border-yellow-500 transition-all ${val ? 'text-white border-indigo-500 shadow-neon' : 'text-slate-700'}`}
+                                                        className={`puzzle-input w-8 h-10 md:w-16 md:h-20 bg-black/40 border-b-4 border-slate-700 flex items-center justify-center font-black text-2xl md:text-5xl text-center uppercase focus:outline-none focus:border-yellow-500 transition-all ${val ? 'text-white border-indigo-500 shadow-neon' : 'text-slate-700'}`}
                                                     />
                                                 );
                                             })}
@@ -536,7 +541,7 @@
                         <div className="flex-1 w-full space-y-3">
                             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.3em] flex justify-between items-center px-2">
                                 <span>Thưởng hiện tại: {wheelResult ? wheelResult + 'đ/chữ' : '100đ/chữ'}</span>
-                                <span className="text-amber-500">-100đ / lần đoán sai</span>
+                                <span className="text-red-500">-100đ / lần đoán sai</span>
                             </p>
                             <div className="grid grid-cols-10 gap-1 md:gap-2">
                                 {VIET_ALPHABET.map(char => {
@@ -553,9 +558,9 @@
                     {showHint && (
                         <div className="fixed inset-0 z-[800] bg-black/90 flex items-center justify-center p-6 backdrop-blur-md">
                             <div className="bg-slate-900 p-8 rounded-[2rem] border-2 border-amber-500 max-w-sm w-full text-center shadow-2xl animate-in zoom-in duration-300">
-                                <h2 className="text-xl font-black text-amber-500 mb-6 uppercase">Cổ Nhân Gợi Ý</h2>
+                                <h2 className="text-xl font-black text-amber-500 mb-6 uppercase tracking-widest">Cổ Nhân Gợi Ý</h2>
                                 <p className="text-white text-lg font-serif italic mb-8 leading-relaxed">"{GAME_DATA[selectedTheme][currentLevel].hint}"</p>
-                                <button onClick={() => setShowHint(false)} className="w-full bg-amber-600 text-white py-4 rounded-2xl font-black uppercase shadow-lg">ĐÃ HIỂU</button>
+                                <button onClick={() => setShowHint(false)} className="w-full bg-amber-600 text-white py-4 rounded-2xl font-black uppercase shadow-lg active:scale-95 transition-transform">ĐÃ HIỂU</button>
                             </div>
                         </div>
                     )}
@@ -579,8 +584,8 @@
                             <div className="bg-slate-900 p-8 rounded-[3rem] border-4 border-red-600 max-w-sm w-full text-center shadow-2xl animate-in shake duration-500">
                                 <div className="text-7xl mb-6">❌</div>
                                 <h2 className="text-2xl font-black mb-4 text-white uppercase">SAI LẦM</h2>
-                                <p className="text-slate-400 text-sm mb-8 italic">Mật mã cổ vật không chính xác. (-200đ)</p>
-                                <button onClick={() => setShowFail(false)} className="w-full bg-red-600 py-4 rounded-xl font-black text-white uppercase shadow-lg">THỬ LẠI</button>
+                                <p className="text-slate-400 text-sm mb-8 italic text-center">Mật mã cổ vật không chính xác. (-200đ)</p>
+                                <button onClick={() => setShowFail(false)} className="w-full bg-red-600 py-4 rounded-xl font-black text-white uppercase shadow-lg active:scale-95 transition-transform">THỬ LẠI</button>
                             </div>
                         </div>
                     )}
@@ -601,7 +606,7 @@
                             <div className="bg-[#0f172a] p-8 md:p-10 rounded-[2rem] border-2 border-red-500 max-w-sm w-full text-center shadow-2xl animate-in slide-in-from-bottom duration-300">
                                 <div className="text-red-500 text-5xl md:text-6xl mb-4 animate-pulse">⚡</div>
                                 <h2 className="text-xl md:text-2xl font-black mb-2 uppercase text-white tracking-tighter">Hết Quota</h2>
-                                <p className="text-slate-400 text-xs mb-8 italic text-center">Giải thuật số sau để nhận 3⚡ năng lượng</p>
+                                <p className="text-slate-400 text-xs mb-8 italic text-center">Giải toán đồ sau để nhận 3⚡ năng lượng</p>
                                 <div className="bg-black/60 p-6 rounded-3xl mb-6">
                                     <p className="text-3xl font-black mb-6 text-blue-400 tracking-tighter">{mathTask.q}</p>
                                     <input type="number" autoFocus onKeyDown={(e) => { if (e.key === 'Enter') { if (parseInt(e.target.value) === mathTask.a) { setSpinsLeft(3); setShowRecharge(false); } else { e.target.value = ""; } } }} className="w-full bg-slate-900 text-white p-4 rounded-xl text-center text-4xl font-black border-2 border-red-600/30 focus:outline-none" placeholder="?" />
